@@ -1,1 +1,1 @@
-<img src=../Progress/DarkMode.png>
+![DarkMode](./public/images/DarkMode.png)
