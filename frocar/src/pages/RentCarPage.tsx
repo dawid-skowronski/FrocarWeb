@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
-import Layout from "../components/Layout";
+
 import Map from "../components/Map"; // Importujemy komponent Map
 
 const RentCarPage = () => {
   return (
-    <Layout>
+   
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -26,7 +26,7 @@ const RentCarPage = () => {
           </p>
         </div>
       </motion.div>
-    </Layout>
+   
   );
 };
 

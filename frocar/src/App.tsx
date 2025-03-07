@@ -5,22 +5,26 @@ import LoginPage from "./pages/LoginPage";
 import Navbar from "./components/Navbar";
 import { AuthProvider } from "./context/AuthContext"; // Import kontekstu
 import "bootstrap/dist/css/bootstrap.min.css";
-import Layout from "./components/Layout";
+import { ThemeProvider } from "./context/ThemeContext";
+
 import AddCarPage from "./pages/AddCarPage";
 import RentCarPage from "./pages/RentCarPage";
+import ProfilePage from "./pages/Profile";
 function App() {
     return (
         <AuthProvider> {/* Musi otaczać całą aplikację */}
+            <ThemeProvider>
             <Navbar />
-            <Layout>
+           
             <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/add-car" element={<AddCarPage />} />
                 <Route path="/rent-car" element={<RentCarPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
             </Routes>
-            </Layout>
+            </ThemeProvider>
         </AuthProvider>
     );
 }
