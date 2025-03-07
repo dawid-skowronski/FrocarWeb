@@ -1,0 +1,68 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+
+.form-check-input {
+  width: 40px;
+  height: 20px;
+  background-color: #d4d4d4;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease-in-out;
+}
+
+.form-check-input:checked {
+  background-color: #28a745 !important; /* Zielony kolor */
+  border-color: #28a745 !important;
+}
+
+.form-check-input:focus {
+  box-shadow: 0 0 5px rgba(40, 167, 69, 0.5) !important;
+}
+
+/* Przesunięcie kółka w przełączniku */
+.form-check-input:checked::before {
+  transform: translateX(20px);
+}
+
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
