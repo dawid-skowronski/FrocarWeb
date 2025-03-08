@@ -1,13 +1,10 @@
-import { motion } from "framer-motion";
-
 import { useState, useEffect } from "react";
-import {
-  GoogleMap,
-  LoadScript,
-  Marker,
-} from "@react-google-maps/api";
+import { motion } from "framer-motion";
+import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { useThemeStyles } from "../styles/useThemeStyles";
 
 // Styl dla mapy w modalu
 const containerStyle = {
@@ -34,29 +31,26 @@ interface FormData {
   fuelType: string;
   seats: string;
   carType: string;
-  features: string; // Zmieniono z "extras" na "features"
-  location: Location | null; // Przechowuje współrzędne przed wysłaniem
+  features: string;
+  location: Location | null;
 }
 
 const AddCarPage = () => {
-  // State to manage form inputs
   const [formData, setFormData] = useState<FormData>({
     brand: "",
     engineCapacity: "",
     fuelType: "",
     seats: "",
     carType: "",
-    features: "", // Zmieniono z "extras"
+    features: "",
     location: null,
   });
 
-  // State for error or success messages
   const [message, setMessage] = useState<string>("");
-
-  // State for modal visibility
   const [showMapModal, setShowMapModal] = useState<boolean>(false);
 
-  // Handle input changes
+  const { theme, backgroundColor, cardBackgroundColor, textColor, buttonColor, errorColor, inputBackgroundColor, borderColor, buttonBackgroundColor, buttonBorderColor } = useThemeStyles();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -65,7 +59,6 @@ const AddCarPage = () => {
     }));
   };
 
-  // Handle map click to select location
   const handleMapClick = (event: google.maps.MapMouseEvent) => {
     const lat = event.latLng?.lat() || 0;
     const lng = event.latLng?.lng() || 0;
@@ -73,22 +66,19 @@ const AddCarPage = () => {
       ...prev,
       location: { lat, lng },
     }));
-    setShowMapModal(false); // Zamknij modal po wybraniu lokalizacji
+    setShowMapModal(false);
   };
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setMessage(""); // Clear previous messages
+    setMessage("");
 
-    // Get token from sessionStorage first, fallback to localStorage
     const token = sessionStorage.getItem("token") || localStorage.getItem("token");
     if (!token) {
       setMessage("Błąd: Nie jesteś zalogowany. Proszę się zalogować.");
       return;
     }
 
-    // Sprawdź, czy lokalizacja została wybrana
     if (!formData.location) {
       setMessage("Błąd: Proszę wybrać lokalizację na mapie.");
       return;
@@ -99,16 +89,16 @@ const AddCarPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // Use the retrieved token
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           brand: formData.brand,
-          engineCapacity: parseFloat(formData.engineCapacity), // Convert to float
+          engineCapacity: parseFloat(formData.engineCapacity),
           fuelType: formData.fuelType,
-          seats: parseInt(formData.seats), // Convert to integer
+          seats: parseInt(formData.seats),
           carType: formData.carType,
-          features: formData.features ? [formData.features] : [], // Konwersja stringa na listę
-          latitude: formData.location.lat, // Wysyłamy jako oddzielne pola
+          features: formData.features ? [formData.features] : [],
+          latitude: formData.location.lat,
           longitude: formData.location.lng,
         }),
       });
@@ -118,7 +108,6 @@ const AddCarPage = () => {
         throw new Error(errorData.message || "Failed to add car listing");
       }
 
-      const result = await response.json(); // Kept for potential future use
       setMessage("Ogłoszenie zostało dodane pomyślnie!");
       setFormData({
         brand: "",
@@ -128,16 +117,14 @@ const AddCarPage = () => {
         carType: "",
         features: "",
         location: null,
-      }); // Reset form
+      });
     } catch (error) {
       const err = error as Error;
       setMessage(`Błąd: ${err.message}`);
     }
   };
 
-  // Effect to check and sync token between session and local storage
   useEffect(() => {
-    // Check if token exists in localStorage and copy to sessionStorage if needed
     const localToken = localStorage.getItem("token");
     const sessionToken = sessionStorage.getItem("token");
     if (localToken && !sessionToken) {
@@ -145,73 +132,82 @@ const AddCarPage = () => {
     }
   }, []);
 
-  // Pobieranie klucza API z import.meta.env
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
   if (!googleMapsApiKey) {
     return <p className="text-danger text-center mt-3">Brak klucza API Google Maps. Sprawdź plik .env.</p>;
   }
 
+  const inputStyle = {
+    backgroundColor: inputBackgroundColor,
+    color: textColor,
+    borderColor,
+  };
+
   return (
-    
+    <div className={`d-flex justify-content-center align-items-center vh-100 theme-${theme}`} style={{ backgroundColor }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="container mt-5"
+        className="card shadow-lg p-4 rounded"
+        style={{ backgroundColor: cardBackgroundColor, color: textColor, width: "400px" }}
       >
-        <h1 className="text-center">Dodaj samochód</h1>
-        {message && <div className="alert alert-info text-center">{message}</div>}
-        <form onSubmit={handleSubmit} className="mt-4">
-          {/* Brand */}
+        <h1 className="text-center mb-4" style={{ color: textColor }}>Dodaj samochód</h1>
+        {message && <div className={`alert ${message.includes("Błąd") ? errorColor : "alert-success"} text-center`}>{message}</div>}
+        <form onSubmit={handleSubmit}>
+          {/* Marka */}
           <div className="mb-3">
-            <label htmlFor="brand" className="form-label">
+            <label htmlFor="brand" className="form-label" style={{ color: textColor }}>
               Marka
             </label>
             <input
               type="text"
-              className="form-control"
+              className="form-control rounded-pill"
               id="brand"
               name="brand"
               value={formData.brand}
               onChange={handleChange}
               placeholder="Marka"
+              style={inputStyle}
               required
             />
           </div>
 
-          {/* Engine Capacity */}
+          {/* Pojemność silnika */}
           <div className="mb-3">
-            <label htmlFor="engineCapacity" className="form-label">
+            <label htmlFor="engineCapacity" className="form-label" style={{ color: textColor }}>
               Pojemność silnika (l)
             </label>
             <input
               type="number"
               step="0.1"
-              className="form-control"
+              className="form-control rounded-pill"
               id="engineCapacity"
               name="engineCapacity"
               value={formData.engineCapacity}
               onChange={handleChange}
               placeholder="Pojemność silnika (l)"
+              style={inputStyle}
               required
             />
           </div>
 
-          {/* Fuel Type */}
+          {/* Rodzaj paliwa */}
           <div className="mb-3">
-            <label htmlFor="fuelType" className="form-label">
+            <label htmlFor="fuelType" className="form-label" style={{ color: textColor }}>
               Wybierz rodzaj paliwa
             </label>
             <select
-              className="form-select"
+              className="form-select rounded-pill"
               id="fuelType"
               name="fuelType"
               value={formData.fuelType}
               onChange={handleChange}
+              style={inputStyle}
               required
             >
-              <option value="">Wybierz rodzaj paliwa</option>
+              <option value="" disabled selected>Wybierz rodzaj paliwa</option>
               <option value="benzyna">Benzyna</option>
               <option value="diesel">Diesel</option>
               <option value="elektryczny">Elektryczny</option>
@@ -219,37 +215,39 @@ const AddCarPage = () => {
             </select>
           </div>
 
-          {/* Number of Seats */}
+          {/* Liczba miejsc */}
           <div className="mb-3">
-            <label htmlFor="seats" className="form-label">
+            <label htmlFor="seats" className="form-label" style={{ color: textColor }}>
               Liczba miejsc
             </label>
             <input
               type="number"
-              className="form-control"
+              className="form-control rounded-pill"
               id="seats"
               name="seats"
               value={formData.seats}
               onChange={handleChange}
               placeholder="Liczba miejsc"
+              style={inputStyle}
               required
             />
           </div>
 
-          {/* Car Type */}
+          {/* Typ samochodu */}
           <div className="mb-3">
-            <label htmlFor="carType" className="form-label">
+            <label htmlFor="carType" className="form-label" style={{ color: textColor }}>
               Wybierz typ samochodu
             </label>
             <select
-              className="form-select"
+              className="form-select rounded-pill"
               id="carType"
               name="carType"
               value={formData.carType}
               onChange={handleChange}
+              style={inputStyle}
               required
             >
-              <option value="">Wybierz typ samochodu</option>
+              <option value="" disabled selected>Wybierz typ samochodu</option>
               <option value="sedan">Sedan</option>
               <option value="suv">SUV</option>
               <option value="kombi">Kombi</option>
@@ -258,52 +256,68 @@ const AddCarPage = () => {
             </select>
           </div>
 
-          {/* Features (dawniej Extras) */}
+          {/* Dodatki */}
           <div className="mb-3">
-            <label htmlFor="features" className="form-label">
+            <label htmlFor="features" className="form-label" style={{ color: textColor }}>
               Dodatki
             </label>
             <input
               type="text"
-              className="form-control"
+              className="form-control rounded-pill"
               id="features"
               name="features"
               value={formData.features}
               onChange={handleChange}
               placeholder="Np. Klimatyzacja"
+              style={inputStyle}
             />
           </div>
 
-          {/* Location */}
+          {/* Lokalizacja */}
           <div className="mb-3">
-            <button
+            <motion.button
               type="button"
-              className="btn btn-secondary w-100"
+              className={`btn ${buttonColor} w-100 rounded-pill text-white`}
+              style={{
+                backgroundColor: buttonBackgroundColor,
+                border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setShowMapModal(true)}
             >
               Wybierz lokalizację na mapie
-            </button>
+            </motion.button>
             {formData.location && (
-              <p className="mt-2 text-center">
+              <p className="mt-2 text-center" style={{ color: textColor }}>
                 Wybrana lokalizacja: Lat: {formData.location.lat.toFixed(4)}, Lng: {formData.location.lng.toFixed(4)}
               </p>
             )}
           </div>
 
-          {/* Submit Button */}
+          {/* Przycisk Dodaj ogłoszenie */}
           <div className="mb-3">
-            <button type="submit" className="btn btn-success w-100">
+            <motion.button
+              type="submit"
+              className={`btn ${buttonColor} w-100 rounded-pill text-white`}
+              style={{
+                backgroundColor: buttonBackgroundColor,
+                border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               Dodaj ogłoszenie
-            </button>
+            </motion.button>
           </div>
         </form>
 
         {/* Modal z mapą */}
         <Modal show={showMapModal} onHide={() => setShowMapModal(false)} size="lg">
-          <Modal.Header closeButton>
+          <Modal.Header closeButton style={{ backgroundColor: cardBackgroundColor, color: textColor, borderColor }}>
             <Modal.Title>Wybierz lokalizację</Modal.Title>
           </Modal.Header>
-          <Modal.Body>
+          <Modal.Body style={{ backgroundColor: cardBackgroundColor }}>
             <LoadScript googleMapsApiKey={googleMapsApiKey}>
               <GoogleMap
                 mapContainerStyle={containerStyle}
@@ -320,14 +334,22 @@ const AddCarPage = () => {
               </GoogleMap>
             </LoadScript>
           </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowMapModal(false)}>
+          <Modal.Footer style={{ backgroundColor: cardBackgroundColor, borderColor }}>
+            <Button
+              variant="secondary"
+              onClick={() => setShowMapModal(false)}
+              style={{
+                backgroundColor: buttonBackgroundColor,
+                border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                color: textColor,
+              }}
+            >
               Zamknij
             </Button>
           </Modal.Footer>
         </Modal>
       </motion.div>
-    
+    </div>
   );
 };
 

@@ -1,0 +1,38 @@
+/* styles.css */
+
+/* Styl dla trybu ciemnego */
+.theme-dark input::placeholder,
+.theme-dark select::placeholder {
+  color: #ffffff !important; /* Biały kolor placeholderów w trybie ciemnym */
+}
+
+/* Styl dla trybu jasnego */
+.theme-light input::placeholder,
+.theme-light select::placeholder {
+  color: #495057 !important; /* Szary kolor placeholderów w trybie jasnym */
+}
+
+/* Stylizacja pierwszej opcji w <select> jako placeholder */
+.theme-light select option[disabled][selected] {
+  color: #495057 !important; /* Szary kolor dla "placeholderów" w <select> */
+  font-style: italic; /* Opcjonalnie: kursywa dla wyróżnienia */
+}
+
+/* Stylizacja <select> w trybie jasnym, gdy wybrana jest pierwsza opcja */
+.theme-light select:invalid {
+  color: #495057 !important; /* Szary kolor, gdy wybrana jest opcja "placeholder" */
+}
+
+/* Styl dla trybu ciemnego w <select> */
+.theme-dark select option[disabled][selected] {
+  color: #ffffff !important; /* Biały kolor dla "placeholderów" w trybie ciemnym */
+}
+
+.theme-dark select:invalid {
+  color: #ffffff !important; /* Biały kolor, gdy wybrana jest opcja "placeholder" */
+}
+
+.table-dark th,
+.table-dark td {
+  border-color: #444; /* Subtelniejszy odcień szarości */
+}

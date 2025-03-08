@@ -6,7 +6,7 @@ import Navbar from "./components/Navbar";
 import { AuthProvider } from "./context/AuthContext"; // Import kontekstu
 import "bootstrap/dist/css/bootstrap.min.css";
 import { ThemeProvider } from "./context/ThemeContext";
-
+import "./styles.css";
 import AddCarPage from "./pages/AddCarPage";
 import RentCarPage from "./pages/RentCarPage";
 import ProfilePage from "./pages/Profile";

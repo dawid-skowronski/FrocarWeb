@@ -44,14 +44,6 @@ const Navbar = () => {
             {isAuthenticated ? (
               <>
                 <li className="nav-item">
-                  <Link
-                    to="/add-car"
-                    className={`nav-link ${
-                      theme === "dark" ? "text-light" : "text-success"
-                    }`}
-                  >
-                    Dodaj samochód
-                  </Link>
                 </li>
                 <li className="nav-item">
                   <Link

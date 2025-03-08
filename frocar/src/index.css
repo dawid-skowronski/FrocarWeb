@@ -77,6 +77,26 @@ button:focus-visible {
   transform: translateX(20px);
 }
 
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+.theme-light {
+  background-color: #f8f9fa; /* Jasne tło w trybie jasnym */
+  color: #0c7b3e;
+}
+
+.theme-dark {
+  background-color: #1a1a1a; /* Ciemne tło w trybie ciemnym */
+  color: #ffffff;
+}
+
+/* Nadpisz domyślne style Bootstrapa dla container, jeśli to konieczne */
+.container.theme-dark {
+  background-color: #1a1a1a !important;
+}
 
 
 
