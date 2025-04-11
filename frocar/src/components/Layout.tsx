@@ -1,75 +1,47 @@
-import { motion } from "framer-motion";
-import { ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
-interface LayoutProps {
-  children: ReactNode;
+// Typy dla motywu
+type Theme = "light" | "dark";
+
+interface ThemeContextType {
+  theme: Theme;
+  toggleTheme: () => void;
 }
 
-const Layout = ({ children }: LayoutProps) => {
-  useEffect(() => {
-    // Dynamiczne zarządzanie przewijaniem z uwzględnieniem Navbar
-    const handleScroll = () => {
-      const navbar = document.querySelector(".navbar") as HTMLElement | null;
-      const layout = document.querySelector(".layout-container") as HTMLElement | null;
-      if (navbar && layout) {
-        const navbarHeight = navbar.offsetHeight; // Rzeczywista wysokość Navbar
-        layout.style.minHeight = `calc(100vh - ${navbarHeight}px)`; // Dynamicznie ustawiamy minHeight
-        const layoutHeight = layout.scrollHeight;
-        const viewportHeight = window.innerHeight - navbarHeight;
-        if (layoutHeight <= viewportHeight) {
-          document.body.style.overflowY = "hidden";
-        } else {
-          document.body.style.overflowY = "auto";
-        }
-      }
-    };
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-    handleScroll(); // Wywołanie przy załadowaniu
-    window.addEventListener("resize", handleScroll);
-    window.addEventListener("load", handleScroll);
-    return () => {
-      window.removeEventListener("resize", handleScroll);
-      window.removeEventListener("load", handleScroll);
-    };
-  }, []);
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+  const [theme, setTheme] = useState<Theme>(() => {
+    // Odczyt z localStorage przy inicjalizacji, domyślnie "light"
+    const savedTheme = localStorage.getItem("theme");
+    return (savedTheme === "light" || savedTheme === "dark") ? savedTheme : "light";
+  });
+
+  const toggleTheme = () => {
+    setTheme((prevTheme) => {
+      const newTheme = prevTheme === "light" ? "dark" : "light";
+      // Zapis do localStorage po zmianie
+      localStorage.setItem("theme", newTheme);
+      return newTheme;
+    });
+  };
+
+  // Opcjonalnie: useEffect dla pewności, że zapis działa przy każdej zmianie
+  useEffect(() => {
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
   return (
-    <motion.div
-      className="d-flex flex-column layout-container"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 1 }}
-      style={{
-        background: "linear-gradient(120deg, #ffffff, #e6f5e6, #ffffff)",
-        backgroundSize: "150% 150%",
-        animation: "gradientAnimation 10s ease infinite",
-        color: "#333",
-        fontFamily: "'Poppins', sans-serif",
-      }}
-    >
-      <style>
-        {`
-          @keyframes gradientAnimation {
-            0% {
-              background-position: 0% 50%;
-            }
-            50% {
-              background-position: 100% 50%;
-            }
-            100% {
-              background-position: 0% 50%;
-            }
-          }
-          .layout-container {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-          }
-        `}
-      </style>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
-    </motion.div>
+    </ThemeContext.Provider>
   );
 };
 
-export default Layout;
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+  return context;
+};

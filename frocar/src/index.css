@@ -98,9 +98,18 @@ body {
   background-color: #1a1a1a !important;
 }
 
+/* Style dla placeholderów */
+.form-control::placeholder {
+  opacity: 1; /* Pełna widoczność */
+}
 
+.theme-light .form-control::placeholder {
+  color: #6c757d; /* Szary w trybie jasnym */
+}
 
-
+.theme-dark .form-control::placeholder {
+  color: #ffffff; /* Biały w trybie ciemnym */
+}
 
 @media (prefers-color-scheme: light) {
   :root {

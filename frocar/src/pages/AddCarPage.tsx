@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import Modal from "react-bootstrap/Modal";
@@ -9,7 +9,7 @@ import { useThemeStyles } from "../styles/useThemeStyles";
 // Styl dla mapy w modalu
 const containerStyle = {
   width: "100%",
-  height: "500px",
+  height: "400px", // Zmniejszone, aby zmieścić pole wyszukiwania
 };
 
 // Domyślne centrum mapy (np. Warszawa, Polska)
@@ -31,7 +31,8 @@ interface FormData {
   fuelType: string;
   seats: string;
   carType: string;
-  features: string;
+  features: string[];
+  rentalPricePerDay: string;
   location: Location | null;
 }
 
@@ -42,15 +43,22 @@ const AddCarPage = () => {
     fuelType: "",
     seats: "",
     carType: "",
-    features: "",
+    features: [],
+    rentalPricePerDay: "",
     location: null,
   });
 
   const [message, setMessage] = useState<string>("");
   const [showMapModal, setShowMapModal] = useState<boolean>(false);
+  const [featureInput, setFeatureInput] = useState<string>("");
+  const [searchAddress, setSearchAddress] = useState<string>(""); // Pole dla wyszukiwania adresu
+  const mapRef = useRef<google.maps.Map | null>(null); // Ref do mapy
 
   const { theme, backgroundColor, cardBackgroundColor, textColor, buttonColor, errorColor, inputBackgroundColor, borderColor, buttonBackgroundColor, buttonBorderColor } = useThemeStyles();
 
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+  // Funkcja do zmiany danych formularza
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -59,16 +67,95 @@ const AddCarPage = () => {
     }));
   };
 
-  const handleMapClick = (event: google.maps.MapMouseEvent) => {
-    const lat = event.latLng?.lat() || 0;
-    const lng = event.latLng?.lng() || 0;
-    setFormData((prev) => ({
-      ...prev,
-      location: { lat, lng },
-    }));
-    setShowMapModal(false);
+  // Funkcja do zmiany dodatków
+  const handleFeatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFeatureInput(e.target.value);
   };
 
+  // Dodawanie dodatku po naciśnięciu Enter
+  const handleAddFeature = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && featureInput.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        features: [...prev.features, featureInput.trim()],
+      }));
+      setFeatureInput("");
+    }
+  };
+
+  // Usuwanie dodatku
+  const handleRemoveFeature = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      features: prev.features.filter((_, i) => i !== index),
+    }));
+  };
+
+  // Ustawianie lokalizacji po kliknięciu na mapę
+  const handleMapClick = (event: google.maps.MapMouseEvent) => {
+    if (event.latLng) {
+      const lat = event.latLng.lat();
+      const lng = event.latLng.lng();
+      setFormData((prev) => ({
+        ...prev,
+        location: { lat, lng },
+      }));
+      setShowMapModal(false);
+    }
+  };
+
+  // Geokodowanie adresu
+  const geocodeAddress = async (address: string) => {
+    if (!address.trim()) {
+      setMessage("Proszę wpisać adres.");
+      return;
+    }
+
+    if (!googleMapsApiKey) {
+      setMessage("Błąd: Brak klucza API Google Maps.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${googleMapsApiKey}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Błąd HTTP ${response.status}: Nie udało się pobrać współrzędnych.`);
+      }
+
+      const data = await response.json();
+
+      if (data.status !== "OK" || !data.results || data.results.length === 0) {
+        throw new Error("Nie znaleziono adresu. Sprawdź poprawność nazwy.");
+      }
+
+      const { lat, lng } = data.results[0].geometry.location;
+      setFormData((prev) => ({
+        ...prev,
+        location: { lat, lng },
+      }));
+      if (mapRef.current) {
+        mapRef.current.panTo({ lat, lng });
+      }
+      setMessage("Lokalizacja ustawiona pomyślnie!");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setMessage(`Błąd: ${error.message}`);
+      } else {
+        setMessage("Błąd: Nieznany błąd podczas wyszukiwania adresu.");
+      }
+    }
+  };
+
+  // Obsługa wyszukiwania adresu
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    geocodeAddress(searchAddress);
+  };
+
+  // Wysyłanie formularza
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage("");
@@ -84,6 +171,23 @@ const AddCarPage = () => {
       return;
     }
 
+    if (!formData.rentalPricePerDay || parseFloat(formData.rentalPricePerDay) <= 0) {
+      setMessage("Błąd: Cena wynajmu na dzień musi być większa od 0.");
+      return;
+    }
+
+    const submitData = {
+      brand: formData.brand,
+      engineCapacity: parseFloat(formData.engineCapacity),
+      fuelType: formData.fuelType,
+      seats: parseInt(formData.seats),
+      carType: formData.carType,
+      features: [...formData.features],
+      rentalPricePerDay: parseFloat(formData.rentalPricePerDay),
+      latitude: formData.location.lat,
+      longitude: formData.location.lng,
+    };
+
     try {
       const response = await fetch("https://localhost:5001/api/CarListings/create", {
         method: "POST",
@@ -91,21 +195,12 @@ const AddCarPage = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          brand: formData.brand,
-          engineCapacity: parseFloat(formData.engineCapacity),
-          fuelType: formData.fuelType,
-          seats: parseInt(formData.seats),
-          carType: formData.carType,
-          features: formData.features ? [formData.features] : [],
-          latitude: formData.location.lat,
-          longitude: formData.location.lng,
-        }),
+        body: JSON.stringify(submitData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add car listing");
+        throw new Error(errorData.message || "Nie udało się dodać ogłoszenia.");
       }
 
       setMessage("Ogłoszenie zostało dodane pomyślnie!");
@@ -115,12 +210,16 @@ const AddCarPage = () => {
         fuelType: "",
         seats: "",
         carType: "",
-        features: "",
+        features: [],
+        rentalPricePerDay: "",
         location: null,
       });
-    } catch (error) {
-      const err = error as Error;
-      setMessage(`Błąd: ${err.message}`);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setMessage(`Błąd: ${error.message}`);
+      } else {
+        setMessage("Błąd: Nieznany błąd.");
+      }
     }
   };
 
@@ -131,8 +230,6 @@ const AddCarPage = () => {
       sessionStorage.setItem("token", localToken);
     }
   }, []);
-
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
   if (!googleMapsApiKey) {
     return <p className="text-danger text-center mt-3">Brak klucza API Google Maps. Sprawdź plik .env.</p>;
@@ -154,7 +251,11 @@ const AddCarPage = () => {
         style={{ backgroundColor: cardBackgroundColor, color: textColor, width: "400px" }}
       >
         <h1 className="text-center mb-4" style={{ color: textColor }}>Dodaj samochód</h1>
-        {message && <div className={`alert ${message.includes("Błąd") ? errorColor : "alert-success"} text-center`}>{message}</div>}
+        {message && (
+          <div className={`alert ${message.includes("Błąd") ? errorColor : "alert-success"} text-center`}>
+            {message}
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
           {/* Marka */}
           <div className="mb-3">
@@ -207,7 +308,7 @@ const AddCarPage = () => {
               style={inputStyle}
               required
             >
-              <option value="" disabled selected>Wybierz rodzaj paliwa</option>
+              <option value="" disabled>Wybierz rodzaj paliwa</option>
               <option value="benzyna">Benzyna</option>
               <option value="diesel">Diesel</option>
               <option value="elektryczny">Elektryczny</option>
@@ -247,7 +348,7 @@ const AddCarPage = () => {
               style={inputStyle}
               required
             >
-              <option value="" disabled selected>Wybierz typ samochodu</option>
+              <option value="" disabled>Wybierz typ samochodu</option>
               <option value="sedan">Sedan</option>
               <option value="suv">SUV</option>
               <option value="kombi">Kombi</option>
@@ -256,20 +357,55 @@ const AddCarPage = () => {
             </select>
           </div>
 
-          {/* Dodatki */}
+          {/* Dodatki (Features) */}
           <div className="mb-3">
             <label htmlFor="features" className="form-label" style={{ color: textColor }}>
-              Dodatki
+              Dodatki (naciśnij Enter, aby dodać)
             </label>
             <input
               type="text"
               className="form-control rounded-pill"
               id="features"
-              name="features"
-              value={formData.features}
-              onChange={handleChange}
+              value={featureInput}
+              onChange={handleFeatureChange}
+              onKeyDown={handleAddFeature}
               placeholder="Np. Klimatyzacja"
               style={inputStyle}
+            />
+            {formData.features.length > 0 && (
+              <ul className="mt-2">
+                {formData.features.map((feature, index) => (
+                  <li key={index} className="d-flex justify-content-between align-items-center">
+                    <span style={{ color: textColor }}>{feature}</span>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => handleRemoveFeature(index)}
+                    >
+                      Usuń
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Cena wynajmu na dzień */}
+          <div className="mb-3">
+            <label htmlFor="rentalPricePerDay" className="form-label" style={{ color: textColor }}>
+              Cena wynajmu na dzień (zł)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              className="form-control rounded-pill"
+              id="rentalPricePerDay"
+              name="rentalPricePerDay"
+              value={formData.rentalPricePerDay}
+              onChange={handleChange}
+              placeholder="Cena wynajmu na dzień (zł)"
+              style={inputStyle}
+              required
             />
           </div>
 
@@ -312,17 +448,48 @@ const AddCarPage = () => {
           </div>
         </form>
 
-        {/* Modal z mapą */}
+        {/* Modal z mapą i polem wyszukiwania */}
         <Modal show={showMapModal} onHide={() => setShowMapModal(false)} size="lg">
           <Modal.Header closeButton style={{ backgroundColor: cardBackgroundColor, color: textColor, borderColor }}>
             <Modal.Title>Wybierz lokalizację</Modal.Title>
           </Modal.Header>
           <Modal.Body style={{ backgroundColor: cardBackgroundColor }}>
+            {/* Pole wyszukiwania w modalu */}
+            <div className="mb-3">
+              <label htmlFor="searchAddress" className="form-label" style={{ color: textColor }}>
+                Wyszukaj adres (np. Lubin Orla 70)
+              </label>
+              <div className="input-group">
+                <input
+                  type="text"
+                  className="form-control rounded-pill"
+                  id="searchAddress"
+                  value={searchAddress}
+                  onChange={(e) => setSearchAddress(e.target.value)}
+                  placeholder="Wpisz adres"
+                  style={inputStyle}
+                />
+                <Button
+                  variant={buttonColor}
+                  style={{
+                    backgroundColor: buttonBackgroundColor,
+                    border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                  }}
+                  onClick={handleSearch}
+                >
+                  Szukaj
+                </Button>
+              </div>
+            </div>
+
             <LoadScript googleMapsApiKey={googleMapsApiKey}>
               <GoogleMap
                 mapContainerStyle={containerStyle}
-                center={defaultCenter}
+                center={formData.location || defaultCenter}
                 zoom={10}
+                onLoad={(map) => {
+                  mapRef.current = map; // Przypisanie mapy do ref bez zwracania wartości
+                }}
                 onClick={handleMapClick}
               >
                 {formData.location && (

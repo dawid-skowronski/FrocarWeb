@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useAuth } from "../context/AuthContext";
@@ -10,10 +9,7 @@ const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <motion.nav
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+    <nav
       className={`navbar navbar-expand-lg shadow-sm ${
         theme === "dark" ? "bg-dark text-light" : "bg-white text-dark"
       }`}
@@ -43,8 +39,6 @@ const Navbar = () => {
           <ul className="navbar-nav ms-auto align-items-center">
             {isAuthenticated ? (
               <>
-                <li className="nav-item">
-                </li>
                 <li className="nav-item">
                   <Link
                     to="/profile"
@@ -98,7 +92,7 @@ const Navbar = () => {
           </ul>
         </div>
       </div>
-    </motion.nav>
+    </nav>
   );
 };
 
