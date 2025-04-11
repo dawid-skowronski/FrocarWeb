@@ -1,54 +1,24 @@
-# React + TypeScript + Vite
+# FrocarWeb
+## Funkcjonalności
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+| ID        | Opis funkcjonalności                                      | API | Web | Mobile | Desktop |
+|-----------|----------------------------------------------------------|-----|-----|--------|---------|
+| RENT-01   | Pierwszy administrator jest automatycznie dodany do systemu. | ✓   |     |        |         |
+| RENT-02   | Administrator może zalogować się w systemie.            | *   |     |        | ✓       |
+| RENT-03   | Administrator może dodawać pojazdy do systemu.          | *   |     |        | ✓       |
+| RENT-04   | Administrator może edytować i usuwać pojazdy.           | *   |     |        | ✓       |
+| RENT-05   | Administrator może zatwierdzać i usuwać ogłoszenia użytkowników. | *   |     |        | ✓       |
+| RENT-06   | Administrator widzi statystyki systemowe.               | *   |     |        | ✓       |
+| RENT-07   | Użytkownik może przeglądać dostępne pojazdy.            | *   | ✓   | ✓      |         |
+| RENT-08   | Użytkownik może filtrować pojazdy według kategorii, ceny i lokalizacji. | *   | ✓   | ✓      |         |
+| RENT-09   | Użytkownik może zobaczyć lokalizację pojazdu na mapie.  | *   | ✓   | ✓      |         |
+| RENT-10   | Użytkownik może zarejestrować się w systemie.           | *   | ✓   | ✓      |         |
+| RENT-11   | Użytkownik może zalogować się w systemie.               | *   | ✓   | ✓      |         |
+| RENT-12   | Użytkownik może zresetować swoje hasło.                 | *   | ✓   | ✓      |         |
+| RENT-13   | Użytkownik może wynająć pojazd na określony czas.       | *   | ✓   | ✓      |         |
+| RENT-14   | Użytkownik otrzymuje powiadomienia o statusie rezerwacji. | *   | ✓   | ✓      |         |
+| RENT-15   | Użytkownik widzi historię swoich wynajmów.              | *   | ✓   | ✓      |         |
+| RENT-16   | Właściciel pojazdu może dodać swój pojazd do wynajmu.   | *   | ✓   | ✓      |         |
+| RENT-17   | Właściciel może edytować i usuwać swoje ogłoszenia.     | *   | ✓   | ✓      |         |
+| RENT-18   | Użytkownik może oceniać i recenzować wynajęte pojazdy.  | *   | ✓   | ✓      |         |
+| RENT-19   | Użytkownik może się wylogować.                          |     | ✓   | ✓      |         |
