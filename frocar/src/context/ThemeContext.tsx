@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
-// Typy dla motywu
+
 type Theme = "light" | "dark";
 
 interface ThemeContextType {
@@ -12,7 +12,6 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Odczyt z localStorage przy inicjalizacji, domyślnie "light"
     const savedTheme = localStorage.getItem("theme");
     return (savedTheme === "light" || savedTheme === "dark") ? savedTheme : "light";
   });
@@ -20,13 +19,12 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const toggleTheme = () => {
     setTheme((prevTheme) => {
       const newTheme = prevTheme === "light" ? "dark" : "light";
-      // Zapis do localStorage po zmianie
       localStorage.setItem("theme", newTheme);
       return newTheme;
     });
   };
 
-  // Synchronizacja z localStorage przy każdej zmianie (opcjonalne, dla pewności)
+
   useEffect(() => {
     localStorage.setItem("theme", theme);
   }, [theme]);

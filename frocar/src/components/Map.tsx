@@ -13,7 +13,7 @@ const containerStyle = {
 };
 
 const defaultCenter = {
-    lat: 51.5074, // Domyślne centrum (np. Londyn)
+    lat: 51.5074, 
     lng: -0.1278,
 };
 
@@ -30,12 +30,12 @@ const Map: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
 
-    // Pobieranie tokenu z magazynu, jeśli użytkownik jest uwierzytelniony
+   
     const getToken = () => {
         return isAuthenticated ? localStorage.getItem("token") || sessionStorage.getItem("token") : null;
     };
 
-    // Pobieranie punktów przy załadowaniu
+    
     useEffect(() => {
         if (isAuthenticated) {
             const token = getToken();
@@ -94,19 +94,19 @@ const Map: React.FC = () => {
     };
 
     const onLoad = (mapInstance: google.maps.Map) => {
-        // Opcjonalna logika po załadowaniu mapy
+       
     };
 
-    // Pobieranie klucza API z import.meta.env
+    
     const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
     if (!googleMapsApiKey) {
         return <p className="text-danger text-center mt-3">Brak klucza API Google Maps. Sprawdź plik .env.</p>;
     }
 
-    // Jeśli użytkownik nie jest zalogowany, nie renderuj nic
+   
     if (!isAuthenticated) {
-        return null; // Nic nie renderujemy
+        return null; 
     }
 
     return (

@@ -2,11 +2,24 @@ import { Link } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { FaSun, FaMoon } from "react-icons/fa"; // Ikony słońca i księżyca
+import { FaSun, FaMoon } from "react-icons/fa";
 
-const Navbar = () => {
+interface NavbarProps {
+  setLoading: () => void;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ setLoading }) => {
   const { isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  const handleClick = () => {
+    setLoading();
+  };
+
+  const handleLogout = () => {
+    setLoading(); 
+    logout(); 
+  };
 
   return (
     <nav
@@ -21,6 +34,7 @@ const Navbar = () => {
           className={`navbar-brand fw-bold ${
             theme === "dark" ? "text-light" : "text-success"
           }`}
+          onClick={handleClick}
         >
           FroCar
         </Link>
@@ -45,12 +59,16 @@ const Navbar = () => {
                     className={`nav-link ${
                       theme === "dark" ? "text-light" : "text-success"
                     }`}
+                    onClick={handleClick}
                   >
                     Profil
                   </Link>
                 </li>
                 <li className="nav-item">
-                  <button onClick={logout} className="btn btn-danger rounded-pill">
+                  <button
+                    onClick={handleLogout}
+                    className="btn btn-danger rounded-pill"
+                  >
                     Wyloguj się
                   </button>
                 </li>
@@ -63,6 +81,7 @@ const Navbar = () => {
                     className={`nav-link ${
                       theme === "dark" ? "text-light" : "text-success"
                     }`}
+                    onClick={handleClick}
                   >
                     Rejestracja
                   </Link>
@@ -73,13 +92,13 @@ const Navbar = () => {
                     className={`nav-link ${
                       theme === "dark" ? "text-light" : "text-success"
                     }`}
+                    onClick={handleClick}
                   >
                     Logowanie
                   </Link>
                 </li>
               </>
             )}
-            {/* Przełącznik motywu */}
             <li className="nav-item">
               <button
                 onClick={toggleTheme}

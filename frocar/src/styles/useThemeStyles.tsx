@@ -1,13 +1,13 @@
 import { useTheme } from "../context/ThemeContext";
 import { CSSProperties } from "react";
 
-export const useThemeStyles = () => {
+export const useThemeStyles = (): ThemeStyles => {
   const { theme } = useTheme();
 
   const backgroundColor = theme === "dark" ? "#1a1a1a" : "#f8f9fa";
   const cardBackgroundColor = theme === "dark" ? "#2d2d2d" : "#ffffff";
   const cardHoverBackgroundColor = theme === "dark" ? "#444" : "rgba(240, 240, 240, 0.9)";
-  const textColor = theme === "dark" ? "#ffffff" : "#218838"; // Zmiana na #218838 w trybie jasnym
+  const textColor = theme === "dark" ? "#ffffff" : "#218838";
   const borderColor = theme === "dark" ? "#444" : "#e0e0e0";
   const inputBackgroundColor = theme === "dark" ? "#3d3d3d" : "#f1f1f1";
   const buttonColor = theme === "dark" ? "btn-outline-light" : "btn-success";
@@ -73,7 +73,7 @@ export const useThemeStyles = () => {
     borderBottom: `1px solid ${borderColor}`,
     textAlign: "left",
     fontSize: "14px",
-    color: textColor, // Upewniamy się, że komórki też używają textColor
+    color: textColor,
   };
 
   const deleteButtonStyle: CSSProperties = {
@@ -118,3 +118,26 @@ export const useThemeStyles = () => {
     alertStyle,
   };
 };
+
+// Typy dla zwracanych wartości
+interface ThemeStyles {
+  theme: string;
+  backgroundColor: string;
+  cardBackgroundColor: string;
+  cardHoverBackgroundColor: string;
+  textColor: string;
+  borderColor: string;
+  inputBackgroundColor: string;
+  buttonColor: string;
+  errorColor: string;
+  switchColor: string;
+  buttonBackgroundColor?: string;
+  buttonBorderColor?: string;
+  cardStyle: CSSProperties;
+  profileCardStyle: CSSProperties;
+  tableStyle: CSSProperties;
+  tableHeaderStyle: CSSProperties;
+  tableCellStyle: CSSProperties;
+  deleteButtonStyle: CSSProperties;
+  alertStyle: CSSProperties;
+}
