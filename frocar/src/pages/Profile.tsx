@@ -27,6 +27,7 @@ interface CarListing {
   userId: number;
   rentalPricePerDay: number;
   isAvailable?: boolean;
+  isApproved: boolean; 
 }
 
 const ProfilePage = () => {
@@ -75,7 +76,7 @@ const ProfilePage = () => {
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
       return payload.sub || "Nieznany użytkownik";
-    } catch (_) { // Changed 'error' to '_' to indicate unused variable
+    } catch (_) {
       setMessage("Błąd: Nieprawidłowy token. Proszę zalogować się ponownie.");
       setTimeout(() => navigate("/login"), 2000);
       return "";
@@ -98,7 +99,7 @@ const ProfilePage = () => {
       }
 
       return data.results[0].formatted_address;
-    } catch (_) { // Changed 'error' to '_' to indicate unused variable
+    } catch (_) {
       return "Błąd pobierania adresu";
     }
   };
@@ -127,10 +128,11 @@ const ProfilePage = () => {
       }
 
       const data: CarListing[] = await response.json();
-      setCarListings(data);
-      setFilteredListings(data);
+      const approvedListings = data.filter(car => car.isApproved);
+      setCarListings(approvedListings);
+      setFilteredListings(approvedListings);
 
-      const addressPromises = data.map((car) =>
+      const addressPromises = approvedListings.map((car) =>
         reverseGeocode(car.latitude, car.longitude).then((address) => ({
           id: car.id,
           address,
@@ -474,7 +476,7 @@ const ProfilePage = () => {
         ) : filteredListings.length === 0 ? (
           <p className="text-center" style={{ color: textColor }}>
             {carListings.length === 0
-              ? "Nie masz jeszcze żadnych samochodów."
+              ? "Nie masz jeszcze żadnych zatwierdzonych samochodów."
               : "Brak samochodów pasujących do filtrów."}
           </p>
         ) : (
@@ -760,7 +762,7 @@ const ProfilePage = () => {
                 Zamknij
               </Button>
             </Modal.Footer>
-            </Modal>
+          </Modal>
         )}
       </motion.div>
     </motion.div>

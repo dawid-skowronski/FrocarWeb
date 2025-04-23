@@ -14,7 +14,7 @@ const containerStyle = {
 };
 
 const defaultCenter = {
-  lat: 52.2297, // Warsaw, Poland
+  lat: 52.2297, // Warszawa, Polska
   lng: 21.0122,
 };
 
@@ -77,10 +77,10 @@ const AddCarPage = () => {
       if (data.status === "OK" && data.results.length > 0) {
         return data.results[0].formatted_address;
       }
-      return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
+      return `Szer.: ${location.lat.toFixed(4)}, Dł.: ${location.lng.toFixed(4)}`;
     } catch (error) {
-      console.error("Error reverse geocoding:", error);
-      return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
+      console.error("Błąd przy odwrotnym geokodowaniu:", error);
+      return `Szer.: ${location.lat.toFixed(4)}, Dł.: ${location.lng.toFixed(4)}`;
     }
   };
 
@@ -97,11 +97,11 @@ const AddCarPage = () => {
 
   const geocodeAddress = async (address: string) => {
     if (!address.trim()) {
-      setMessage("Please enter an address.");
+      setMessage("Proszę wpisać adres.");
       return;
     }
     if (!googleMapsApiKey) {
-      setMessage("Error: Google Maps API key is missing.");
+      setMessage("Błąd: Brak klucza API Google Maps.");
       return;
     }
     try {
@@ -111,11 +111,11 @@ const AddCarPage = () => {
         )}&key=${googleMapsApiKey}`
       );
       if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}: Failed to fetch coordinates.`);
+        throw new Error(`Błąd HTTP ${response.status}: Nie udało się pobrać współrzędnych.`);
       }
       const data = await response.json();
       if (data.status !== "OK" || !data.results || data.results.length === 0) {
-        throw new Error("Address not found. Please check the input.");
+        throw new Error("Nie znaleziono adresu. Sprawdź wpisane dane.");
       }
       const { lat, lng } = data.results[0].geometry.location;
       setSelectedAddress(data.results[0].formatted_address);
@@ -123,9 +123,9 @@ const AddCarPage = () => {
       if (mapRef.current) {
         mapRef.current.panTo({ lat, lng });
       }
-      setMessage("Location set successfully!");
+      setMessage("Lokalizacja ustawiona pomyślnie!");
     } catch (error) {
-      setMessage(`Error: ${error instanceof Error ? error.message : "Unknown error."}`);
+      setMessage(`Błąd: ${error instanceof Error ? error.message : "Nieznany błąd."}`);
     }
   };
 
@@ -171,13 +171,13 @@ const AddCarPage = () => {
 
     const token = Cookies.get("token");
     if (!token) {
-      setMessage("Error: You are not logged in. Redirecting to login...");
+      setMessage("Błąd: Nie jesteś zalogowany. Przekierowuję na stronę logowania...");
       setTimeout(() => navigate("/login"), 2000);
       return;
     }
 
     if (!formData.location) {
-      setMessage("Error: Please select a location on the map.");
+      setMessage("Błąd: Proszę wybrać lokalizację na mapie.");
       return;
     }
 
@@ -185,7 +185,7 @@ const AddCarPage = () => {
       !formData.rentalPricePerDay ||
       parseFloat(formData.rentalPricePerDay) <= 0
     ) {
-      setMessage("Error: Rental price per day must be greater than 0.");
+      setMessage("Błąd: Cena wynajmu za dzień musi być większa od 0.");
       return;
     }
 
@@ -214,10 +214,10 @@ const AddCarPage = () => {
         }
       );
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add car listing.");
+        const errorData = await response.text();
+        throw new Error(errorData || "Nie udało się dodać samochodu.");
       }
-      setMessage("Car listing added successfully!");
+      setMessage("Samochód dodany pomyślnie!");
       setFormData({
         brand: "",
         engineCapacity: "",
@@ -230,14 +230,14 @@ const AddCarPage = () => {
       });
       setSelectedAddress("");
     } catch (error) {
-      setMessage(`Error: ${error instanceof Error ? error.message : "Unknown error."}`);
+      setMessage(`Błąd: ${error instanceof Error ? error.message : "Nieznany błąd."}`);
     }
   };
 
   if (!googleMapsApiKey) {
     return (
       <p className="text-danger text-center mt-3">
-        Google Maps API key is missing. Please check the .env file.
+        Brak klucza API Google Maps. Sprawdź plik .env.
       </p>
     );
   }
@@ -278,13 +278,13 @@ const AddCarPage = () => {
         }}
       >
         <h1 className="text-center mb-4" style={{ color: textColor }}>
-          Add a Car
+          Dodaj Samochód
         </h1>
 
         {message && (
           <div
             className={`alert ${
-              message.includes("Error") ? errorColor : "alert-success"
+              message.includes("Błąd") ? errorColor : "alert-success"
             } text-center`}
           >
             {message}
@@ -299,7 +299,7 @@ const AddCarPage = () => {
                 className="form-label"
                 style={{ color: textColor }}
               >
-                Brand
+                Marka
               </label>
               <input
                 type="text"
@@ -308,7 +308,7 @@ const AddCarPage = () => {
                 name="brand"
                 value={formData.brand}
                 onChange={handleChange}
-                placeholder="Brand"
+                placeholder="Marka"
                 style={inputStyle}
                 required
               />
@@ -320,7 +320,7 @@ const AddCarPage = () => {
                 className="form-label"
                 style={{ color: textColor }}
               >
-                Engine Capacity (L)
+                Pojemność Silnika (L)
               </label>
               <input
                 type="number"
@@ -330,7 +330,7 @@ const AddCarPage = () => {
                 name="engineCapacity"
                 value={formData.engineCapacity}
                 onChange={handleChange}
-                placeholder="Engine Capacity (L)"
+                placeholder="Pojemność Silnika (L)"
                 style={inputStyle}
                 required
               />
@@ -342,7 +342,7 @@ const AddCarPage = () => {
                 className="form-label"
                 style={{ color: textColor }}
               >
-                Fuel Type
+                Rodzaj Paliwa
               </label>
               <select
                 className="form-select rounded-pill"
@@ -354,12 +354,12 @@ const AddCarPage = () => {
                 required
               >
                 <option value="" disabled>
-                  Select Fuel Type
+                  Wybierz Rodzaj Paliwa
                 </option>
-                <option value="benzyna">Petrol</option>
+                <option value="benzyna">Benzyna</option>
                 <option value="diesel">Diesel</option>
-                <option value="elektryczny">Electric</option>
-                <option value="hybryda">Hybrid</option>
+                <option value="elektryczny">Elektryczny</option>
+                <option value="hybryda">Hybryda</option>
               </select>
             </div>
 
@@ -369,7 +369,7 @@ const AddCarPage = () => {
                 className="form-label"
                 style={{ color: textColor }}
               >
-                Number of Seats
+                Liczba Miejsc
               </label>
               <input
                 type="number"
@@ -378,7 +378,7 @@ const AddCarPage = () => {
                 name="seats"
                 value={formData.seats}
                 onChange={handleChange}
-                placeholder="Number of Seats"
+                placeholder="Liczba Miejsc"
                 style={inputStyle}
                 required
               />
@@ -390,7 +390,7 @@ const AddCarPage = () => {
                 className="form-label"
                 style={{ color: textColor }}
               >
-                Car Type
+                Typ Samochodu
               </label>
               <select
                 className="form-select rounded-pill"
@@ -402,11 +402,11 @@ const AddCarPage = () => {
                 required
               >
                 <option value="" disabled>
-                  Select Car Type
+                  Wybierz Typ Samochodu
                 </option>
                 <option value="sedan">Sedan</option>
                 <option value="suv">SUV</option>
-                <option value="kombi">Estate</option>
+                <option value="kombi">Kombi</option>
                 <option value="hatchback">Hatchback</option>
                 <option value="coupe">Coupe</option>
               </select>
@@ -418,7 +418,7 @@ const AddCarPage = () => {
                 className="form-label"
                 style={{ color: textColor }}
               >
-                Rental Price per Day (PLN)
+                Cena Wynajmu za Dzień (PLN)
               </label>
               <input
                 type="number"
@@ -428,7 +428,7 @@ const AddCarPage = () => {
                 name="rentalPricePerDay"
                 value={formData.rentalPricePerDay}
                 onChange={handleChange}
-                placeholder="Rental Price per Day (PLN)"
+                placeholder="Cena Wynajmu za Dzień (PLN)"
                 style={inputStyle}
                 required
               />
@@ -440,7 +440,7 @@ const AddCarPage = () => {
                 className="form-label"
                 style={{ color: textColor }}
               >
-                Features (press Enter to add)
+                Dodatki (naciśnij Enter, aby dodać)
               </label>
               <input
                 type="text"
@@ -449,17 +449,17 @@ const AddCarPage = () => {
                 value={featureInput}
                 onChange={handleFeatureChange}
                 onKeyDown={handleAddFeature}
-                placeholder="E.g., Air Conditioning"
+                placeholder="Np. Klimatyzacja"
                 style={featureInputStyle}
               />
               {formData.features.length > 0 && (
                 <div className="mt-3">
                   <div className="d-flex justify-content-between align-items-center mb-2">
                     <h6 className="mb-0" style={{ color: textColor }}>
-                      Features
+                      Dodatki
                     </h6>
                     <h6 className="mb-0" style={{ color: textColor }}>
-                      Actions
+                      Akcje
                     </h6>
                   </div>
                   <div className="list-group">
@@ -481,7 +481,7 @@ const AddCarPage = () => {
                           onClick={() => handleRemoveFeature(index)}
                           style={deleteButtonStyle}
                         >
-                          Remove
+                          Usuń
                         </button>
                       </div>
                     ))}
@@ -505,11 +505,11 @@ const AddCarPage = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowMapModal(true)}
               >
-                Select Location on Map
+                Wybierz Lokalizację na Mapie
               </motion.button>
               {formData.location && (
                 <p className="mt-2 text-center" style={{ color: textColor }}>
-                  Selected Location: {selectedAddress}
+                  Wybrana Lokalizacja: {selectedAddress}
                 </p>
               )}
             </div>
@@ -528,7 +528,7 @@ const AddCarPage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                Add Listing
+                Dodaj Ogłoszenie
               </motion.button>
             </div>
           </div>
@@ -547,7 +547,7 @@ const AddCarPage = () => {
               borderColor,
             }}
           >
-            <Modal.Title>Select Location</Modal.Title>
+            <Modal.Title>Wybierz Lokalizację</Modal.Title>
           </Modal.Header>
           <Modal.Body style={{ backgroundColor: cardBackgroundColor }}>
             <div className="mb-3">
@@ -556,7 +556,7 @@ const AddCarPage = () => {
                 className="form-label"
                 style={{ color: textColor }}
               >
-                Search Address (e.g., Lubin Orla 70)
+                Szukaj Adresu (np. Lubin Orla 70)
               </label>
               <div className="input-group">
                 <input
@@ -565,7 +565,7 @@ const AddCarPage = () => {
                   id="searchAddress"
                   value={searchAddress}
                   onChange={(e) => setSearchAddress(e.target.value)}
-                  placeholder="Enter address"
+                  placeholder="Wpisz adres"
                   style={inputStyle}
                 />
                 <Button
@@ -579,7 +579,7 @@ const AddCarPage = () => {
                   }}
                   onClick={handleSearch}
                 >
-                  Search
+                  Szukaj
                 </Button>
               </div>
             </div>
@@ -618,7 +618,7 @@ const AddCarPage = () => {
                 color: theme === "dark" ? textColor : "black",
               }}
             >
-              Close
+              Zamknij
             </Button>
           </Modal.Footer>
         </Modal>

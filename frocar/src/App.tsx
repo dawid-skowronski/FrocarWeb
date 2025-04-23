@@ -14,13 +14,12 @@ import RentCarPage from "./pages/RentCarPage";
 import ProfilePage from "./pages/Profile";
 import FullscreenText from "./components/FullscreenText";
 import RentalsPage from "./pages/RentalsPage";
-
+import RentalDetailsPage from "./pages/RentalDetailsPage";
 
 const App = () => {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  
   const setLoading = () => {
     setIsLoading(true);
     setTimeout(() => {
@@ -43,6 +42,7 @@ const App = () => {
               <Route path="/rent-car" element={<RentCarPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/rentals" element={<RentalsPage />} />
+              <Route path="/rentals/:id" element={<RentalDetailsPage />} /> 
             </Routes>
           )}
         </AnimatePresence>

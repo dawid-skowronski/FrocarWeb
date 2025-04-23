@@ -22,6 +22,7 @@ interface CarListing {
   features: string[];
   latitude: number;
   longitude: number;
+  isApproved: boolean;
 }
 
 interface CarRentalRequest {
@@ -38,7 +39,7 @@ const containerStyle = { width: "100%", height: "400px" };
 
 // Debounce utility function
 const debounce = (func: (...args: any[]) => void, delay: number) => {
-  let timeoutId: number; // Changed from NodeJS.Timeout to number
+  let timeoutId: number;
   return (...args: any[]) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func(...args), delay);
@@ -164,15 +165,17 @@ const RentCarPage = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(
-          JSON.parse(errorData)?.message || errorData || "Błąd pobierania ogłoszeń."
-        );
+        // W przypadku błędu, odpowiedź może być tekstem, a nie JSON-em
+        const errorText = await response.text();
+        throw new Error(errorText || `Błąd HTTP ${response.status}`);
       }
+
+      // Odpowiedź jest poprawna, parsujemy jako JSON
       const data = await response.json();
       const filteredListings = data.filter(
-        (listing: CarListing) => listing.isAvailable && listing.userId !== currentUserId
+        (listing: CarListing) => listing.isAvailable && listing.userId !== currentUserId && listing.isApproved
       );
       setListings(filteredListings);
       setFilteredListings(filteredListings);
@@ -214,6 +217,10 @@ const RentCarPage = () => {
       setMessage("Nie możesz wypożyczyć własnego samochodu.");
       return;
     }
+    if (!selectedListing.isApproved) {
+      setMessage("Nie możesz wypożyczyć niezatwierdzonego ogłoszenia.");
+      return;
+    }
 
     const token = Cookies.get("token");
     if (!token) {
@@ -238,7 +245,7 @@ const RentCarPage = () => {
       if (!response.ok) {
         const errorData = await response.text();
         throw new Error(
-          JSON.parse(errorData)?.message || errorData || "Błąd wypożyczania."
+          errorData || "Błąd wypożyczania."
         );
       }
       setMessage("Wypożyczenie utworzone pomyślnie!");

@@ -10,7 +10,6 @@ interface CarListing {
   brand: string;
   carType: string;
   rentalPricePerDay: number;
-  
 }
 
 interface Rental {
@@ -19,6 +18,7 @@ interface Rental {
   rentalStartDate: string;
   rentalEndDate: string;
   
+
 }
 
 const RentalsPage = () => {
@@ -61,8 +61,19 @@ const RentalsPage = () => {
       }
 
       const data = await response.json();
-      setRentals(data);
-      if (data.length === 0) {
+     
+      const mappedRentals: Rental[] = data.map((item: any) => ({
+        id: item.carRentalId, 
+        carListing: {
+          brand: item.carListing.brand,
+          carType: item.carListing.carType,
+          rentalPricePerDay: item.carListing.rentalPricePerDay,
+        },
+        rentalStartDate: item.rentalStartDate,
+        rentalEndDate: item.rentalEndDate,
+      }));
+      setRentals(mappedRentals);
+      if (mappedRentals.length === 0) {
         setServerError("Brak wypożyczeń dla tego użytkownika.");
       }
     } catch (error) {
@@ -82,11 +93,19 @@ const RentalsPage = () => {
     fetchRentals();
   };
 
-  const handleViewDetails = (rentalId: number) => {
+  const handleViewDetails = (rentalId: number | undefined) => {
+    if (!rentalId) {
+      console.error("Brak rentalId");
+      return;
+    }
     navigate(`/rentals/${rentalId}`);
   };
 
-  const handleCancelRental = (rentalId: number) => {
+  const handleCancelRental = (rentalId: number | undefined) => {
+    if (!rentalId) {
+      console.error("Brak rentalId");
+      return;
+    }
     alert(`Anulowanie wypożyczenia o ID: ${rentalId} (funkcjonalność do zaimplementowania)`);
   };
 
@@ -115,8 +134,7 @@ const RentalsPage = () => {
             className={`btn ${buttonColor} rounded-pill text-white`}
             style={{
               backgroundColor: buttonBackgroundColor,
-              border:
-                theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+              border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
             }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -136,10 +154,7 @@ const RentalsPage = () => {
                 className={`btn btn-sm ${buttonColor} text-white`}
                 style={{
                   backgroundColor: buttonBackgroundColor,
-                  border:
-                    theme === "dark"
-                      ? `2px solid ${buttonBorderColor}`
-                      : undefined,
+                  border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
                 }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -167,8 +182,7 @@ const RentalsPage = () => {
                 transition={{ duration: 0.4 }}
                 className="list-group-item mb-3 rounded d-flex justify-content-between align-items-center"
                 style={{
-                  backgroundColor:
-                    theme === "dark" ? "#343a40" : "#f8f9fa",
+                  backgroundColor: theme === "dark" ? "#343a40" : "#f8f9fa",
                   color: textColor,
                   border: "none",
                 }}
@@ -203,10 +217,7 @@ const RentalsPage = () => {
                     className={`btn btn-sm ${buttonColor} me-2 text-white`}
                     style={{
                       backgroundColor: buttonBackgroundColor,
-                      border:
-                        theme === "dark"
-                          ? `2px solid ${buttonBorderColor}`
-                          : undefined,
+                      border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
                     }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
