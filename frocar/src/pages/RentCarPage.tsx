@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
@@ -6,6 +6,8 @@ import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useThemeStyles } from "../styles/useThemeStyles";
 import { jwtDecode } from "jwt-decode";
+import Cookies from "js-cookie";
+import { useNavigate } from "react-router-dom";
 
 interface CarListing {
   id: number;
@@ -34,6 +36,15 @@ interface DecodedToken {
 
 const containerStyle = { width: "100%", height: "400px" };
 
+// Debounce utility function
+const debounce = (func: (...args: any[]) => void, delay: number) => {
+  let timeoutId: number; // Changed from NodeJS.Timeout to number
+  return (...args: any[]) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
+
 const RentCarPage = () => {
   const [listings, setListings] = useState<CarListing[]>([]);
   const [filteredListings, setFilteredListings] = useState<CarListing[]>([]);
@@ -43,7 +54,11 @@ const RentCarPage = () => {
   const [showMapModal, setShowMapModal] = useState(false);
   const [selectedListing, setSelectedListing] = useState<CarListing | null>(null);
   const [selectedMapListing, setSelectedMapListing] = useState<CarListing | null>(null);
-  const [rentalData, setRentalData] = useState<CarRentalRequest>({ carListingId: 0, rentalStartDate: "", rentalEndDate: "" });
+  const [rentalData, setRentalData] = useState<CarRentalRequest>({
+    carListingId: 0,
+    rentalStartDate: "",
+    rentalEndDate: "",
+  });
   const [city, setCity] = useState("");
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [addresses, setAddresses] = useState<{ [key: number]: string }>({});
@@ -54,31 +69,47 @@ const RentCarPage = () => {
   const [filterPriceMax, setFilterPriceMax] = useState<string>("");
   const [filterSeatsMin, setFilterSeatsMin] = useState<string>("");
 
-  const { theme, backgroundColor, cardBackgroundColor, textColor, buttonColor, errorColor, buttonBackgroundColor, buttonBorderColor } = useThemeStyles();
+  const {
+    theme,
+    backgroundColor,
+    cardBackgroundColor,
+    textColor,
+    buttonColor,
+    errorColor,
+    buttonBackgroundColor,
+    buttonBorderColor,
+  } = useThemeStyles();
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const token = Cookies.get("token");
     if (token) {
       try {
         const decoded: DecodedToken = jwtDecode(token);
         const userId = parseInt(decoded.nameid);
         setCurrentUserId(userId);
       } catch (error) {
-        setMessage("Błąd dekodowania tokena.");
+        setMessage("Błąd dekodowania tokena. Przekierowuję na stronę logowania...");
+        setTimeout(() => navigate("/login"), 2000);
       }
     } else {
-      setMessage("Nie jesteś zalogowany.");
+      setMessage("Nie jesteś zalogowany. Przekierowuję na stronę logowania...");
+      setTimeout(() => navigate("/login"), 2000);
     }
-  }, []);
+  }, [navigate]);
 
   const reverseGeocode = async (lat: number, lng: number) => {
     try {
-      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${googleMapsApiKey}`);
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${googleMapsApiKey}`
+      );
       if (!response.ok) throw new Error(`Błąd HTTP ${response.status}`);
       const data = await response.json();
-      return data.status === "OK" && data.results.length > 0 ? data.results[0].formatted_address : "Adres nieznany";
-    } catch (error) {
+      return data.status === "OK" && data.results.length > 0
+        ? data.results[0].formatted_address
+        : "Adres nieznany";
+    } catch {
       return "Błąd pobierania adresu";
     }
   };
@@ -87,24 +118,30 @@ const RentCarPage = () => {
     if (!city.trim()) return setMessage("Proszę wpisać nazwę miasta."), false;
     if (!googleMapsApiKey) return setMessage("Brak klucza API Google Maps."), false;
     try {
-      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city)}&key=${googleMapsApiKey}`);
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+          city
+        )}&key=${googleMapsApiKey}`
+      );
       if (!response.ok) throw new Error(`Błąd HTTP ${response.status}`);
       const data = await response.json();
-      if (data.status !== "OK" || !data.results.length) throw new Error("Nie znaleziono miasta.");
+      if (data.status !== "OK" || !data.results.length)
+        throw new Error("Nie znaleziono miasta.");
       setCoordinates(data.results[0].geometry.location);
       setMessage("");
       return true;
-    } catch (error) {
-      setMessage(`Błąd: ${error instanceof Error ? error.message : "Nieznany błąd."}`);
+    } catch {
+      setMessage("Błąd: Nieznany błąd.");
       return false;
     }
   };
 
-  const fetchAvailableListings = async () => {
+  const fetchAvailableListings = useCallback(async () => {
     setLoading(true);
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const token = Cookies.get("token");
     if (!token) {
-      setMessage("Nie jesteś zalogowany.");
+      setMessage("Nie jesteś zalogowany. Przekierowuję na stronę logowania...");
+      setTimeout(() => navigate("/login"), 2000);
       setLoading(false);
       return;
     }
@@ -120,28 +157,45 @@ const RentCarPage = () => {
     }
 
     try {
-      const response = await fetch(`https://localhost:5001/api/CarListings/list?lat=${coordinates.lat}&lng=${coordinates.lng}&radius=50`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch(
+        `https://localhost:5001/api/CarListings/list?lat=${coordinates.lat}&lng=${coordinates.lng}&radius=50`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (!response.ok) {
         const errorData = await response.text();
-        throw new Error(JSON.parse(errorData)?.message || errorData || "Błąd pobierania ogłoszeń.");
+        throw new Error(
+          JSON.parse(errorData)?.message || errorData || "Błąd pobierania ogłoszeń."
+        );
       }
       const data = await response.json();
-      const filteredListings = data.filter((listing: CarListing) => listing.isAvailable && listing.userId !== currentUserId);
+      const filteredListings = data.filter(
+        (listing: CarListing) => listing.isAvailable && listing.userId !== currentUserId
+      );
       setListings(filteredListings);
       setFilteredListings(filteredListings);
 
-      const addressResults = await Promise.all(filteredListings.map((listing: CarListing) => reverseGeocode(listing.latitude, listing.longitude).then((address) => ({ id: listing.id, address }))));
-      setAddresses(addressResults.reduce((acc, { id, address }) => ({ ...acc, [id]: address }), {}));
-      setMessage(filteredListings.length === 0 ? "Brak dostępnych samochodów w regionie." : "");
+      // Batch reverse geocoding with a delay to avoid rate limits
+      const addressResults = [];
+      for (const listing of filteredListings) {
+        const address = await reverseGeocode(listing.latitude, listing.longitude);
+        addressResults.push({ id: listing.id, address });
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Delay to avoid rate limits
+      }
+      setAddresses(
+        addressResults.reduce((acc, { id, address }) => ({ ...acc, [id]: address }), {})
+      );
+      setMessage(
+        filteredListings.length === 0 ? "Brak dostępnych samochodów w regionie." : ""
+      );
     } catch (error) {
       setMessage(`Błąd: ${error instanceof Error ? error.message : "Nieznany błąd."}`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [coordinates, currentUserId, navigate]);
 
   const handleRent = async () => {
     if (!selectedListing || !rentalData.rentalStartDate || !rentalData.rentalEndDate) {
@@ -161,16 +215,31 @@ const RentCarPage = () => {
       return;
     }
 
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const token = Cookies.get("token");
+    if (!token) {
+      setMessage("Nie jesteś zalogowany. Przekierowuję na stronę logowania...");
+      setTimeout(() => navigate("/login"), 2000);
+      return;
+    }
+
     try {
       const response = await fetch("https://localhost:5001/api/CarRental/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ carListingId: selectedListing.id, rentalStartDate: rentalData.rentalStartDate, rentalEndDate: rentalData.rentalEndDate }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          carListingId: selectedListing.id,
+          rentalStartDate: rentalData.rentalStartDate,
+          rentalEndDate: rentalData.rentalEndDate,
+        }),
       });
       if (!response.ok) {
         const errorData = await response.text();
-        throw new Error(JSON.parse(errorData)?.message || errorData || "Błąd wypożyczania.");
+        throw new Error(
+          JSON.parse(errorData)?.message || errorData || "Błąd wypożyczania."
+        );
       }
       setMessage("Wypożyczenie utworzone pomyślnie!");
       setShowRentalModal(false);
@@ -180,14 +249,17 @@ const RentCarPage = () => {
     }
   };
 
-  const handleSearch = async (): Promise<void> => {
+  const handleSearch = async () => {
     const success = await geocodeCity(city);
     if (success) fetchAvailableListings();
   };
 
+  // Debounce the search to prevent rapid successive calls
+  const debouncedSearch = useCallback(debounce(handleSearch, 500), [city, coordinates]);
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "Enter") {
-      handleSearch().then(() => {});
+      debouncedSearch();
     }
   };
 
@@ -207,8 +279,10 @@ const RentCarPage = () => {
     const priceMin = filterPriceMin ? parseFloat(filterPriceMin) : 0;
     const priceMax = filterPriceMax ? parseFloat(filterPriceMax) : Infinity;
     if (filterPriceMin || filterPriceMax) {
-      filtered = filtered.filter((listing) =>
-        listing.rentalPricePerDay >= priceMin && listing.rentalPricePerDay <= priceMax
+      filtered = filtered.filter(
+        (listing) =>
+          listing.rentalPricePerDay >= priceMin &&
+          listing.rentalPricePerDay <= priceMax
       );
     }
 
@@ -223,14 +297,27 @@ const RentCarPage = () => {
 
   useEffect(() => {
     if (coordinates && currentUserId !== null) {
-      fetchAvailableListings().then(() => {});
+      fetchAvailableListings();
     }
   }, [coordinates, currentUserId]);
+
+  if (!googleMapsApiKey) {
+    return (
+      <p className="text-danger text-center mt-3">
+        Brak klucza API Google Maps. Sprawdź plik .env.
+      </p>
+    );
+  }
 
   return (
     <div className={`vh-100 theme-${theme}`} style={{ backgroundColor }}>
       <div className="container py-4">
-        <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mb-4" style={{ color: textColor }}>
+        <motion.h1
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center mb-4"
+          style={{ color: textColor }}
+        >
           Wynajmij samochód
         </motion.h1>
         <div className="row mb-4">
@@ -247,8 +334,11 @@ const RentCarPage = () => {
               />
               <Button
                 variant={buttonColor}
-                style={{ backgroundColor: buttonBackgroundColor, border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined }}
-                onClick={handleSearch}
+                style={{
+                  backgroundColor: buttonBackgroundColor,
+                  border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                }}
+                onClick={debouncedSearch}
               >
                 Szukaj
               </Button>
@@ -331,7 +421,13 @@ const RentCarPage = () => {
           </div>
         </div>
 
-        {message && <div className={`alert ${message.includes("Błąd") ? errorColor : "alert-success"} text-center`}>{message}</div>}
+        {message && (
+          <div
+            className={`alert ${message.includes("Błąd") ? errorColor : "alert-success"} text-center`}
+          >
+            {message}
+          </div>
+        )}
         {loading ? (
           <p className="text-center" style={{ color: textColor }}>
             Ładowanie...
@@ -339,10 +435,19 @@ const RentCarPage = () => {
         ) : (
           <div className="row">
             {filteredListings.map((listing) => (
-              <motion.div key={listing.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="col-md-4 mb-4">
+              <motion.div
+                key={listing.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="col-md-4 mb-4"
+              >
                 <div
                   className="card shadow-sm"
-                  style={{ backgroundColor: cardBackgroundColor, color: textColor, cursor: "pointer" }}
+                  style={{
+                    backgroundColor: cardBackgroundColor,
+                    color: textColor,
+                    cursor: "pointer",
+                  }}
                   onClick={() => {
                     setSelectedMapListing(listing);
                     setShowMapModal(true);
@@ -360,7 +465,10 @@ const RentCarPage = () => {
                     </p>
                     <Button
                       variant={buttonColor}
-                      style={{ backgroundColor: buttonBackgroundColor, border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined }}
+                      style={{
+                        backgroundColor: buttonBackgroundColor,
+                        border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedListing(listing);
@@ -377,14 +485,34 @@ const RentCarPage = () => {
           </div>
         )}
         {selectedMapListing && (
-          <Modal show={showMapModal} onHide={() => setShowMapModal(false)} size="lg" dialogClassName={`theme-${theme}`}>
-            <Modal.Header closeButton style={{ backgroundColor: cardBackgroundColor, color: textColor }}>
+          <Modal
+            show={showMapModal}
+            onHide={() => setShowMapModal(false)}
+            size="lg"
+            dialogClassName={`theme-${theme}`}
+          >
+            <Modal.Header
+              closeButton
+              style={{ backgroundColor: cardBackgroundColor, color: textColor }}
+            >
               <Modal.Title>Lokalizacja: {selectedMapListing.brand}</Modal.Title>
             </Modal.Header>
             <Modal.Body style={{ backgroundColor: cardBackgroundColor }}>
               <LoadScript googleMapsApiKey={googleMapsApiKey}>
-                <GoogleMap mapContainerStyle={containerStyle} center={{ lat: selectedMapListing.latitude, lng: selectedMapListing.longitude }} zoom={15}>
-                  <Marker position={{ lat: selectedMapListing.latitude, lng: selectedMapListing.longitude }} />
+                <GoogleMap
+                  mapContainerStyle={containerStyle}
+                  center={{
+                    lat: selectedMapListing.latitude,
+                    lng: selectedMapListing.longitude,
+                  }}
+                  zoom={15}
+                >
+                  <Marker
+                    position={{
+                      lat: selectedMapListing.latitude,
+                      lng: selectedMapListing.longitude,
+                    }}
+                  />
                 </GoogleMap>
               </LoadScript>
               <p className="mt-3" style={{ color: textColor }}>
@@ -392,15 +520,26 @@ const RentCarPage = () => {
               </p>
             </Modal.Body>
             <Modal.Footer style={{ backgroundColor: cardBackgroundColor }}>
-              <Button variant="secondary" onClick={() => setShowMapModal(false)} style={{ backgroundColor: buttonBackgroundColor, color: textColor }}>
+              <Button
+                variant="secondary"
+                onClick={() => setShowMapModal(false)}
+                style={{ backgroundColor: buttonBackgroundColor, color: textColor }}
+              >
                 Zamknij
               </Button>
             </Modal.Footer>
           </Modal>
         )}
         {selectedListing && (
-          <Modal show={showRentalModal} onHide={() => setShowRentalModal(false)} dialogClassName={`theme-${theme}`}>
-            <Modal.Header closeButton style={{ backgroundColor: cardBackgroundColor, color: textColor }}>
+          <Modal
+            show={showRentalModal}
+            onHide={() => setShowRentalModal(false)}
+            dialogClassName={`theme-${theme}`}
+          >
+            <Modal.Header
+              closeButton
+              style={{ backgroundColor: cardBackgroundColor, color: textColor }}
+            >
               <Modal.Title>Wynajmij {selectedListing.brand}</Modal.Title>
             </Modal.Header>
             <Modal.Body style={{ backgroundColor: cardBackgroundColor }}>
@@ -412,7 +551,9 @@ const RentCarPage = () => {
                   type="date"
                   className="form-control"
                   value={rentalData.rentalStartDate}
-                  onChange={(e) => setRentalData({ ...rentalData, rentalStartDate: e.target.value })}
+                  onChange={(e) =>
+                    setRentalData({ ...rentalData, rentalStartDate: e.target.value })
+                  }
                 />
               </div>
               <div className="mb-3">
@@ -423,12 +564,17 @@ const RentCarPage = () => {
                   type="date"
                   className="form-control"
                   value={rentalData.rentalEndDate}
-                  onChange={(e) => setRentalData({ ...rentalData, rentalEndDate: e.target.value })}
+                  onChange={(e) =>
+                    setRentalData({ ...rentalData, rentalEndDate: e.target.value })
+                  }
                 />
               </div>
             </Modal.Body>
             <Modal.Footer style={{ backgroundColor: cardBackgroundColor }}>
-              <Button variant="secondary" onClick={() => setShowRentalModal(false)}>
+              <Button
+                variant="secondary"
+                onClick={() => setShowRentalModal(false)}
+              >
                 Anuluj
               </Button>
               <Button variant="primary" onClick={handleRent}>

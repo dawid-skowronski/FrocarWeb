@@ -13,6 +13,8 @@ import AddCarPage from "./pages/AddCarPage";
 import RentCarPage from "./pages/RentCarPage";
 import ProfilePage from "./pages/Profile";
 import FullscreenText from "./components/FullscreenText";
+import RentalsPage from "./pages/RentalsPage";
+
 
 const App = () => {
   const location = useLocation();
@@ -40,6 +42,7 @@ const App = () => {
               <Route path="/add-car" element={<AddCarPage />} />
               <Route path="/rent-car" element={<RentCarPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/rentals" element={<RentalsPage />} />
             </Routes>
           )}
         </AnimatePresence>

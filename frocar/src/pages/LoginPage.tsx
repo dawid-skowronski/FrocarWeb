@@ -39,7 +39,7 @@ const LoginPage = () => {
         return;
       }
       const data = await response.json();
-      login(data.token, rememberMe);
+      login(data.token, rememberMe); // Wywołanie funkcji login z tokenem i rememberMe
       navigate("/");
     } catch (error) {
       setServerError("Błąd połączenia z serwerem.");

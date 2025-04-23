@@ -1,8 +1,10 @@
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom"; // Add useNavigate
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { FaSun, FaMoon } from "react-icons/fa";
+import Cookies from "js-cookie";
 
 interface NavbarProps {
   setLoading: () => void;
@@ -11,14 +13,59 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ setLoading }) => {
   const { isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [rentalCount, setRentalCount] = useState<number>(0);
+  const navigate = useNavigate(); // Add navigate hook
+
+  useEffect(() => {
+    const fetchUserRentals = async () => {
+      if (!isAuthenticated) {
+        setRentalCount(0);
+        return;
+      }
+
+      const token = Cookies.get("token");
+      if (!token) {
+        logout(); // Log out if token is missing
+        navigate("/login");
+        return;
+      }
+
+      try {
+        const response = await fetch("https://localhost:5001/api/CarRental/user", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            // Handle 401 Unauthorized
+            logout();
+            navigate("/login");
+            return;
+          }
+          throw new Error("Failed to fetch user rentals");
+        }
+
+        const rentals = await response.json();
+        setRentalCount(rentals.length);
+      } catch (error) {
+        console.error("Error fetching user rentals:", error);
+        setRentalCount(0);
+      }
+    };
+
+    fetchUserRentals();
+  }, [isAuthenticated, logout, navigate]); // Add logout and navigate to dependencies
 
   const handleClick = () => {
     setLoading();
   };
 
   const handleLogout = () => {
-    setLoading(); 
-    logout(); 
+    setLoading();
+    logout();
   };
 
   return (
@@ -62,6 +109,17 @@ const Navbar: React.FC<NavbarProps> = ({ setLoading }) => {
                     onClick={handleClick}
                   >
                     Profil
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    to="/rentals"
+                    className={`nav-link ${
+                      theme === "dark" ? "text-light" : "text-success"
+                    }`}
+                    onClick={handleClick}
+                  >
+                    Moje wypożyczenia ({rentalCount})
                   </Link>
                 </li>
                 <li className="nav-item">

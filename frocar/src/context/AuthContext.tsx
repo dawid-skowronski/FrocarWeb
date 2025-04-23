@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -11,27 +12,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
+  // Sprawdzenie, czy token istnieje w ciasteczku przy ładowaniu komponentu
   useEffect(() => {
-    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token = Cookies.get("token");
     setIsAuthenticated(!!token);
   }, []);
 
+  // Funkcja logowania zapisująca token w ciasteczku
   const login = (token: string, rememberMe: boolean) => {
-    if (rememberMe) {
-      localStorage.setItem("token", token);
-    } else {
-      sessionStorage.setItem("token", token);
-    }
+    const expires = rememberMe ? 7 : undefined; // 7 dni ważności, jeśli "Zapamiętaj mnie" jest włączone
+    Cookies.set("token", token, { expires });
     setIsAuthenticated(true);
   };
 
+  // Funkcja wylogowania usuwająca token z ciasteczka
   const logout = () => {
-    localStorage.removeItem("token");
-    sessionStorage.removeItem("token");
+    Cookies.remove("token");
     setIsAuthenticated(false);
-    navigate("/"); 
+    navigate("/");
   };
 
   return (

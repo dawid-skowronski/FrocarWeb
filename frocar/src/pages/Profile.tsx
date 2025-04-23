@@ -7,15 +7,11 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { useThemeStyles } from "../styles/useThemeStyles";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
+import Cookies from "js-cookie";
 
 const containerStyle = {
   width: "100%",
   height: "500px",
-};
-
-const defaultCenter = {
-  lat: 52.2297,
-  lng: 21.0122,
 };
 
 interface CarListing {
@@ -69,7 +65,7 @@ const ProfilePage = () => {
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
   const getUsernameFromToken = () => {
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const token = Cookies.get("token");
     if (!token) {
       setMessage("Błąd: Nie jesteś zalogowany. Przekierowuję na stronę logowania...");
       setTimeout(() => navigate("/login"), 2000);
@@ -79,7 +75,7 @@ const ProfilePage = () => {
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
       return payload.sub || "Nieznany użytkownik";
-    } catch (error) {
+    } catch (_) { // Changed 'error' to '_' to indicate unused variable
       setMessage("Błąd: Nieprawidłowy token. Proszę zalogować się ponownie.");
       setTimeout(() => navigate("/login"), 2000);
       return "";
@@ -102,7 +98,7 @@ const ProfilePage = () => {
       }
 
       return data.results[0].formatted_address;
-    } catch (error) {
+    } catch (_) { // Changed 'error' to '_' to indicate unused variable
       return "Błąd pobierania adresu";
     }
   };
@@ -110,7 +106,7 @@ const ProfilePage = () => {
   const fetchUserCarListings = async () => {
     setLoading(true);
     setMessage("");
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const token = Cookies.get("token");
     if (!token) {
       setMessage("Błąd: Nie jesteś zalogowany. Proszę się zalogować.");
       setLoading(false);
@@ -159,7 +155,7 @@ const ProfilePage = () => {
 
   const handleChangeUsername = async () => {
     setMessage("");
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const token = Cookies.get("token");
     if (!token) {
       setMessage("Błąd: Nie jesteś zalogowany. Proszę się zalogować.");
       return;
@@ -215,7 +211,7 @@ const ProfilePage = () => {
     if (!listingToDelete) return;
 
     setMessage("");
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const token = Cookies.get("token");
     if (!token) {
       setMessage("Błąd: Nie jesteś zalogowany. Proszę się zalogować.");
       setShowDeleteModal(false);
@@ -252,7 +248,7 @@ const ProfilePage = () => {
 
   const toggleAvailability = async (id: number) => {
     setMessage("");
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const token = Cookies.get("token");
     if (!token) {
       setMessage("Błąd: Nie jesteś zalogowany. Proszę się zalogować.");
       return;
@@ -301,7 +297,7 @@ const ProfilePage = () => {
   const handleSaveEdit = async () => {
     if (!selectedListing) return;
 
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const token = Cookies.get("token");
     try {
       const response = await fetch(`https://localhost:5001/api/CarListings/${selectedListing.id}`, {
         method: "PUT",
@@ -764,7 +760,7 @@ const ProfilePage = () => {
                 Zamknij
               </Button>
             </Modal.Footer>
-          </Modal>
+            </Modal>
         )}
       </motion.div>
     </motion.div>

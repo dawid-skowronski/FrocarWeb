@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useThemeStyles } from "../styles/useThemeStyles";
+import Cookies from "js-cookie";
+import { useNavigate } from "react-router-dom";
 
 const containerStyle = {
   width: "100%",
@@ -12,7 +14,7 @@ const containerStyle = {
 };
 
 const defaultCenter = {
-  lat: 52.2297,
+  lat: 52.2297, // Warsaw, Poland
   lng: 21.0122,
 };
 
@@ -43,7 +45,6 @@ const AddCarPage = () => {
     rentalPricePerDay: "",
     location: null,
   });
-
   const [message, setMessage] = useState<string>("");
   const [showMapModal, setShowMapModal] = useState<boolean>(false);
   const [featureInput, setFeatureInput] = useState<string>("");
@@ -51,9 +52,20 @@ const AddCarPage = () => {
   const [selectedAddress, setSelectedAddress] = useState<string>("");
   const mapRef = useRef<google.maps.Map | null>(null);
 
-  const { theme, backgroundColor, cardBackgroundColor, textColor, buttonColor, errorColor, 
-          inputBackgroundColor, borderColor, buttonBackgroundColor, buttonBorderColor } = useThemeStyles();
+  const {
+    theme,
+    backgroundColor,
+    cardBackgroundColor,
+    textColor,
+    buttonColor,
+    errorColor,
+    inputBackgroundColor,
+    borderColor,
+    buttonBackgroundColor,
+    buttonBorderColor,
+  } = useThemeStyles();
 
+  const navigate = useNavigate();
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
   const reverseGeocode = async (location: Location): Promise<string> => {
@@ -61,15 +73,13 @@ const AddCarPage = () => {
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.lat},${location.lng}&key=${googleMapsApiKey}`
       );
-      
       const data = await response.json();
-      
       if (data.status === "OK" && data.results.length > 0) {
         return data.results[0].formatted_address;
       }
       return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
     } catch (error) {
-      console.error("Błąd geokodowania:", error);
+      console.error("Error reverse geocoding:", error);
       return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
     }
   };
@@ -79,67 +89,51 @@ const AddCarPage = () => {
       const lat = event.latLng.lat();
       const lng = event.latLng.lng();
       const address = await reverseGeocode({ lat, lng });
-      
       setSelectedAddress(address);
-      setFormData(prev => ({
-        ...prev,
-        location: { lat, lng },
-      }));
+      setFormData((prev) => ({ ...prev, location: { lat, lng } }));
       setShowMapModal(false);
     }
   };
 
   const geocodeAddress = async (address: string) => {
     if (!address.trim()) {
-      setMessage("Proszę wpisać adres.");
+      setMessage("Please enter an address.");
       return;
     }
-
     if (!googleMapsApiKey) {
-      setMessage("Błąd: Brak klucza API Google Maps.");
+      setMessage("Error: Google Maps API key is missing.");
       return;
     }
-
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${googleMapsApiKey}`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+          address
+        )}&key=${googleMapsApiKey}`
       );
-
       if (!response.ok) {
-        throw new Error(`Błąd HTTP ${response.status}: Nie udało się pobrać współrzędnych.`);
+        throw new Error(`HTTP error ${response.status}: Failed to fetch coordinates.`);
       }
-
       const data = await response.json();
-
       if (data.status !== "OK" || !data.results || data.results.length === 0) {
-        throw new Error("Nie znaleziono adresu. Sprawdź poprawność nazwy.");
+        throw new Error("Address not found. Please check the input.");
       }
-
       const { lat, lng } = data.results[0].geometry.location;
       setSelectedAddress(data.results[0].formatted_address);
-      setFormData(prev => ({
-        ...prev,
-        location: { lat, lng },
-      }));
+      setFormData((prev) => ({ ...prev, location: { lat, lng } }));
       if (mapRef.current) {
         mapRef.current.panTo({ lat, lng });
       }
-      setMessage("Lokalizacja ustawiona pomyślnie!");
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        setMessage(`Błąd: ${error.message}`);
-      } else {
-        setMessage("Błąd: Nieznany błąd podczas wyszukiwania adresu.");
-      }
+      setMessage("Location set successfully!");
+    } catch (error) {
+      setMessage(`Error: ${error instanceof Error ? error.message : "Unknown error."}`);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFeatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,7 +144,7 @@ const AddCarPage = () => {
     if (e.key === "Enter") {
       e.preventDefault();
       if (featureInput.trim()) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           features: [...prev.features, featureInput.trim()],
         }));
@@ -160,7 +154,7 @@ const AddCarPage = () => {
   };
 
   const handleRemoveFeature = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       features: prev.features.filter((_, i) => i !== index),
     }));
@@ -175,19 +169,23 @@ const AddCarPage = () => {
     e.preventDefault();
     setMessage("");
 
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const token = Cookies.get("token");
     if (!token) {
-      setMessage("Błąd: Nie jesteś zalogowany. Proszę się zalogować.");
+      setMessage("Error: You are not logged in. Redirecting to login...");
+      setTimeout(() => navigate("/login"), 2000);
       return;
     }
 
     if (!formData.location) {
-      setMessage("Błąd: Proszę wybrać lokalizację na mapie.");
+      setMessage("Error: Please select a location on the map.");
       return;
     }
 
-    if (!formData.rentalPricePerDay || parseFloat(formData.rentalPricePerDay) <= 0) {
-      setMessage("Błąd: Cena wynajmu na dzień musi być większa od 0.");
+    if (
+      !formData.rentalPricePerDay ||
+      parseFloat(formData.rentalPricePerDay) <= 0
+    ) {
+      setMessage("Error: Rental price per day must be greater than 0.");
       return;
     }
 
@@ -204,21 +202,22 @@ const AddCarPage = () => {
     };
 
     try {
-      const response = await fetch("https://localhost:5001/api/CarListings/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(submitData),
-      });
-
+      const response = await fetch(
+        "https://localhost:5001/api/CarListings/create",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(submitData),
+        }
+      );
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Nie udało się dodać ogłoszenia.");
+        throw new Error(errorData.message || "Failed to add car listing.");
       }
-
-      setMessage("Ogłoszenie zostało dodane pomyślnie!");
+      setMessage("Car listing added successfully!");
       setFormData({
         brand: "",
         engineCapacity: "",
@@ -230,25 +229,17 @@ const AddCarPage = () => {
         location: null,
       });
       setSelectedAddress("");
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        setMessage(`Błąd: ${error.message}`);
-      } else {
-        setMessage("Błąd: Nieznany błąd.");
-      }
+    } catch (error) {
+      setMessage(`Error: ${error instanceof Error ? error.message : "Unknown error."}`);
     }
   };
 
-  useEffect(() => {
-    const localToken = localStorage.getItem("token");
-    const sessionToken = sessionStorage.getItem("token");
-    if (localToken && !sessionToken) {
-      sessionStorage.setItem("token", localToken);
-    }
-  }, []);
-
   if (!googleMapsApiKey) {
-    return <p className="text-danger text-center mt-3">Brak klucza API Google Maps. Sprawdź plik .env.</p>;
+    return (
+      <p className="text-danger text-center mt-3">
+        Google Maps API key is missing. Please check the .env file.
+      </p>
+    );
   }
 
   const inputStyle = {
@@ -270,18 +261,32 @@ const AddCarPage = () => {
   };
 
   return (
-    <div className={`d-flex justify-content-center align-items-center vh-100 theme-${theme}`} style={{ backgroundColor }}>
+    <div
+      className={`d-flex justify-content-center align-items-center vh-100 theme-${theme}`}
+      style={{ backgroundColor }}
+    >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="card shadow-lg p-4 rounded"
-        style={{ backgroundColor: cardBackgroundColor, color: textColor, width: "100%", maxWidth: "1200px" }}
+        style={{
+          backgroundColor: cardBackgroundColor,
+          color: textColor,
+          width: "100%",
+          maxWidth: "1200px",
+        }}
       >
-        <h1 className="text-center mb-4" style={{ color: textColor }}>Dodaj samochód</h1>
-        
+        <h1 className="text-center mb-4" style={{ color: textColor }}>
+          Add a Car
+        </h1>
+
         {message && (
-          <div className={`alert ${message.includes("Błąd") ? errorColor : "alert-success"} text-center`}>
+          <div
+            className={`alert ${
+              message.includes("Error") ? errorColor : "alert-success"
+            } text-center`}
+          >
             {message}
           </div>
         )}
@@ -289,8 +294,12 @@ const AddCarPage = () => {
         <form onSubmit={handleSubmit}>
           <div className="row g-3">
             <div className="col-md-4">
-              <label htmlFor="brand" className="form-label" style={{ color: textColor }}>
-                Marka
+              <label
+                htmlFor="brand"
+                className="form-label"
+                style={{ color: textColor }}
+              >
+                Brand
               </label>
               <input
                 type="text"
@@ -299,15 +308,19 @@ const AddCarPage = () => {
                 name="brand"
                 value={formData.brand}
                 onChange={handleChange}
-                placeholder="Marka"
+                placeholder="Brand"
                 style={inputStyle}
                 required
               />
             </div>
 
             <div className="col-md-4">
-              <label htmlFor="engineCapacity" className="form-label" style={{ color: textColor }}>
-                Pojemność silnika (l)
+              <label
+                htmlFor="engineCapacity"
+                className="form-label"
+                style={{ color: textColor }}
+              >
+                Engine Capacity (L)
               </label>
               <input
                 type="number"
@@ -317,15 +330,19 @@ const AddCarPage = () => {
                 name="engineCapacity"
                 value={formData.engineCapacity}
                 onChange={handleChange}
-                placeholder="Pojemność silnika (l)"
+                placeholder="Engine Capacity (L)"
                 style={inputStyle}
                 required
               />
             </div>
 
             <div className="col-md-4">
-              <label htmlFor="fuelType" className="form-label" style={{ color: textColor }}>
-                Rodzaj paliwa
+              <label
+                htmlFor="fuelType"
+                className="form-label"
+                style={{ color: textColor }}
+              >
+                Fuel Type
               </label>
               <select
                 className="form-select rounded-pill"
@@ -336,17 +353,23 @@ const AddCarPage = () => {
                 style={inputStyle}
                 required
               >
-                <option value="" disabled>Wybierz rodzaj paliwa</option>
-                <option value="benzyna">Benzyna</option>
+                <option value="" disabled>
+                  Select Fuel Type
+                </option>
+                <option value="benzyna">Petrol</option>
                 <option value="diesel">Diesel</option>
-                <option value="elektryczny">Elektryczny</option>
-                <option value="hybryda">Hybryda</option>
+                <option value="elektryczny">Electric</option>
+                <option value="hybryda">Hybrid</option>
               </select>
             </div>
 
             <div className="col-md-4">
-              <label htmlFor="seats" className="form-label" style={{ color: textColor }}>
-                Liczba miejsc
+              <label
+                htmlFor="seats"
+                className="form-label"
+                style={{ color: textColor }}
+              >
+                Number of Seats
               </label>
               <input
                 type="number"
@@ -355,15 +378,19 @@ const AddCarPage = () => {
                 name="seats"
                 value={formData.seats}
                 onChange={handleChange}
-                placeholder="Liczba miejsc"
+                placeholder="Number of Seats"
                 style={inputStyle}
                 required
               />
             </div>
 
             <div className="col-md-4">
-              <label htmlFor="carType" className="form-label" style={{ color: textColor }}>
-                Typ samochodu
+              <label
+                htmlFor="carType"
+                className="form-label"
+                style={{ color: textColor }}
+              >
+                Car Type
               </label>
               <select
                 className="form-select rounded-pill"
@@ -374,18 +401,24 @@ const AddCarPage = () => {
                 style={inputStyle}
                 required
               >
-                <option value="" disabled>Wybierz typ samochodu</option>
+                <option value="" disabled>
+                  Select Car Type
+                </option>
                 <option value="sedan">Sedan</option>
                 <option value="suv">SUV</option>
-                <option value="kombi">Kombi</option>
+                <option value="kombi">Estate</option>
                 <option value="hatchback">Hatchback</option>
                 <option value="coupe">Coupe</option>
               </select>
             </div>
 
             <div className="col-md-4">
-              <label htmlFor="rentalPricePerDay" className="form-label" style={{ color: textColor }}>
-                Cena wynajmu na dzień (zł)
+              <label
+                htmlFor="rentalPricePerDay"
+                className="form-label"
+                style={{ color: textColor }}
+              >
+                Rental Price per Day (PLN)
               </label>
               <input
                 type="number"
@@ -395,15 +428,19 @@ const AddCarPage = () => {
                 name="rentalPricePerDay"
                 value={formData.rentalPricePerDay}
                 onChange={handleChange}
-                placeholder="Cena wynajmu na dzień (zł)"
+                placeholder="Rental Price per Day (PLN)"
                 style={inputStyle}
                 required
               />
             </div>
 
             <div className="col-12">
-              <label htmlFor="features" className="form-label" style={{ color: textColor }}>
-                Dodatki (naciśnij Enter, aby dodać)
+              <label
+                htmlFor="features"
+                className="form-label"
+                style={{ color: textColor }}
+              >
+                Features (press Enter to add)
               </label>
               <input
                 type="text"
@@ -412,14 +449,18 @@ const AddCarPage = () => {
                 value={featureInput}
                 onChange={handleFeatureChange}
                 onKeyDown={handleAddFeature}
-                placeholder="Np. Klimatyzacja"
+                placeholder="E.g., Air Conditioning"
                 style={featureInputStyle}
               />
               {formData.features.length > 0 && (
                 <div className="mt-3">
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h6 className="mb-0" style={{ color: textColor }}>Dodatki</h6>
-                    <h6 className="mb-0" style={{ color: textColor }}>Akcje</h6>
+                    <h6 className="mb-0" style={{ color: textColor }}>
+                      Features
+                    </h6>
+                    <h6 className="mb-0" style={{ color: textColor }}>
+                      Actions
+                    </h6>
                   </div>
                   <div className="list-group">
                     {formData.features.map((feature, index) => (
@@ -427,9 +468,11 @@ const AddCarPage = () => {
                         key={index}
                         className="list-group-item d-flex justify-content-between align-items-center"
                         style={{
-                          backgroundColor: theme === 'dark' ? '#2c3034' : '#f8f9fa',
-                          borderColor: theme === 'dark' ? '#495057' : '#dee2e6',
-                          color: textColor
+                          backgroundColor:
+                            theme === "dark" ? "#2c3034" : "#f8f9fa",
+                          borderColor:
+                            theme === "dark" ? "#495057" : "#dee2e6",
+                          color: textColor,
                         }}
                       >
                         <span>{feature}</span>
@@ -438,7 +481,7 @@ const AddCarPage = () => {
                           onClick={() => handleRemoveFeature(index)}
                           style={deleteButtonStyle}
                         >
-                          Usuń
+                          Remove
                         </button>
                       </div>
                     ))}
@@ -453,17 +496,20 @@ const AddCarPage = () => {
                 className={`btn ${buttonColor} w-100 rounded-pill text-white`}
                 style={{
                   backgroundColor: buttonBackgroundColor,
-                  border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                  border:
+                    theme === "dark"
+                      ? `2px solid ${buttonBorderColor}`
+                      : undefined,
                 }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowMapModal(true)}
               >
-                Wybierz lokalizację na mapie
+                Select Location on Map
               </motion.button>
               {formData.location && (
                 <p className="mt-2 text-center" style={{ color: textColor }}>
-                  Wybrana lokalizacja: {selectedAddress}
+                  Selected Location: {selectedAddress}
                 </p>
               )}
             </div>
@@ -474,25 +520,43 @@ const AddCarPage = () => {
                 className={`btn ${buttonColor} w-100 rounded-pill text-white`}
                 style={{
                   backgroundColor: buttonBackgroundColor,
-                  border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                  border:
+                    theme === "dark"
+                      ? `2px solid ${buttonBorderColor}`
+                      : undefined,
                 }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                Dodaj ogłoszenie
+                Add Listing
               </motion.button>
             </div>
           </div>
         </form>
 
-        <Modal show={showMapModal} onHide={() => setShowMapModal(false)} size="lg">
-          <Modal.Header closeButton style={{ backgroundColor: cardBackgroundColor, color: textColor, borderColor }}>
-            <Modal.Title>Wybierz lokalizację</Modal.Title>
+        <Modal
+          show={showMapModal}
+          onHide={() => setShowMapModal(false)}
+          size="lg"
+        >
+          <Modal.Header
+            closeButton
+            style={{
+              backgroundColor: cardBackgroundColor,
+              color: textColor,
+              borderColor,
+            }}
+          >
+            <Modal.Title>Select Location</Modal.Title>
           </Modal.Header>
           <Modal.Body style={{ backgroundColor: cardBackgroundColor }}>
             <div className="mb-3">
-              <label htmlFor="searchAddress" className="form-label" style={{ color: textColor }}>
-                Wyszukaj adres (np. Lubin Orla 70)
+              <label
+                htmlFor="searchAddress"
+                className="form-label"
+                style={{ color: textColor }}
+              >
+                Search Address (e.g., Lubin Orla 70)
               </label>
               <div className="input-group">
                 <input
@@ -501,18 +565,21 @@ const AddCarPage = () => {
                   id="searchAddress"
                   value={searchAddress}
                   onChange={(e) => setSearchAddress(e.target.value)}
-                  placeholder="Wpisz adres"
+                  placeholder="Enter address"
                   style={inputStyle}
                 />
                 <Button
                   variant={buttonColor}
                   style={{
                     backgroundColor: buttonBackgroundColor,
-                    border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                    border:
+                      theme === "dark"
+                        ? `2px solid ${buttonBorderColor}`
+                        : undefined,
                   }}
                   onClick={handleSearch}
                 >
-                  Szukaj
+                  Search
                 </Button>
               </div>
             </div>
@@ -529,14 +596,19 @@ const AddCarPage = () => {
               >
                 {formData.location && (
                   <Marker
-                    position={{ lat: formData.location.lat, lng: formData.location.lng }}
+                    position={{
+                      lat: formData.location.lat,
+                      lng: formData.location.lng,
+                    }}
                     title={selectedAddress}
                   />
                 )}
               </GoogleMap>
             </LoadScript>
           </Modal.Body>
-          <Modal.Footer style={{ backgroundColor: cardBackgroundColor, borderColor }}>
+          <Modal.Footer
+            style={{ backgroundColor: cardBackgroundColor, borderColor }}
+          >
             <Button
               variant="secondary"
               onClick={() => setShowMapModal(false)}
@@ -546,7 +618,7 @@ const AddCarPage = () => {
                 color: theme === "dark" ? textColor : "black",
               }}
             >
-              Zamknij
+              Close
             </Button>
           </Modal.Footer>
         </Modal>
