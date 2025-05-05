@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom"; // Add useNavigate
+import { Link, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -14,7 +14,7 @@ const Navbar: React.FC<NavbarProps> = ({ setLoading }) => {
   const { isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [rentalCount, setRentalCount] = useState<number>(0);
-  const navigate = useNavigate(); // Add navigate hook
+  const navigate = useNavigate(); 
 
   useEffect(() => {
     const fetchUserRentals = async () => {
@@ -25,7 +25,7 @@ const Navbar: React.FC<NavbarProps> = ({ setLoading }) => {
 
       const token = Cookies.get("token");
       if (!token) {
-        logout(); // Log out if token is missing
+        logout(); 
         navigate("/login");
         return;
       }
@@ -40,7 +40,7 @@ const Navbar: React.FC<NavbarProps> = ({ setLoading }) => {
 
         if (!response.ok) {
           if (response.status === 401) {
-            // Handle 401 Unauthorized
+            
             logout();
             navigate("/login");
             return;
@@ -57,7 +57,7 @@ const Navbar: React.FC<NavbarProps> = ({ setLoading }) => {
     };
 
     fetchUserRentals();
-  }, [isAuthenticated, logout, navigate]); // Add logout and navigate to dependencies
+  }, [isAuthenticated, logout, navigate]); 
 
   const handleClick = () => {
     setLoading();

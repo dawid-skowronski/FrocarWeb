@@ -37,7 +37,7 @@ interface DecodedToken {
 
 const containerStyle = { width: "100%", height: "400px" };
 
-// Debounce utility function
+
 const debounce = (func: (...args: any[]) => void, delay: number) => {
   let timeoutId: number;
   return (...args: any[]) => {
@@ -185,7 +185,7 @@ const RentCarPage = () => {
       for (const listing of filteredListings) {
         const address = await reverseGeocode(listing.latitude, listing.longitude);
         addressResults.push({ id: listing.id, address });
-        await new Promise((resolve) => setTimeout(resolve, 100)); // Delay to avoid rate limits
+        await new Promise((resolve) => setTimeout(resolve, 100)); 
       }
       setAddresses(
         addressResults.reduce((acc, { id, address }) => ({ ...acc, [id]: address }), {})

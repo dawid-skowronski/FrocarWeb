@@ -27,7 +27,7 @@ interface CarListing {
   userId: number;
   rentalPricePerDay: number;
   isAvailable?: boolean;
-  isApproved: boolean; 
+  isApproved: boolean;
 }
 
 const ProfilePage = () => {
@@ -405,7 +405,7 @@ const ProfilePage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       className={`d-flex justify-content-center align-items-center theme-${theme}`}
-      style={{ backgroundColor, color: textColor, minHeight: "100vh", width: "100%", margin: 0, padding: 0 }}
+      style={{ backgroundColor, color: textColor, minHeight: "100vh", width: "100%", margin: 0, padding: "20px" }}
     >
       <motion.div style={profileCardStyle}>
         <h1 className="text-center mb-4" style={{ color: textColor }}>Twój profil</h1>
@@ -424,12 +424,28 @@ const ProfilePage = () => {
               padding: "5px 10px",
               borderRadius: "5px",
               cursor: "pointer",
+              marginRight: "10px",
             }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setShowUsernameModal(true)}
           >
             Zmień nazwę użytkownika
+          </motion.button>
+          <motion.button
+            style={{
+              backgroundColor: "#28a745",
+              color: "white",
+              border: "none",
+              padding: "5px 10px",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate("/rental-history")}
+          >
+            Zobacz historię wypożyczeń
           </motion.button>
         </div>
 

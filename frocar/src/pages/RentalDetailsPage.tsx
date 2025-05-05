@@ -4,8 +4,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import Cookies from "js-cookie";
 import { useThemeStyles } from "../styles/useThemeStyles";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaCar, FaArrowLeft, FaTimes } from "react-icons/fa";
-
+import { FaCar, FaArrowLeft, FaTimes, FaStar } from "react-icons/fa";
 
 interface CarListing {
   brand: string;
@@ -23,13 +22,18 @@ interface Rental {
   rentalStartDate: string;
   rentalEndDate: string;
   userId: number;
+  rentalStatus: string;
 }
 
 const RentalDetailsPage = () => {
-  const { id } = useParams<{ id: string }>(); 
+  const { id } = useParams<{ id: string }>();
   const [rental, setRental] = useState<Rental | null>(null);
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [reviewRating, setReviewRating] = useState<number>(0);
+  const [reviewComment, setReviewComment] = useState<string>("");
+  const [reviewError, setReviewError] = useState<string>("");
+  const [reviewSuccess, setReviewSuccess] = useState<string>("");
   const navigate = useNavigate();
   const {
     theme,
@@ -73,9 +77,8 @@ const RentalDetailsPage = () => {
         }
 
         const data = await response.json();
-       
         const mappedRental: Rental = {
-          id: data.carRentalId, 
+          id: data.carRentalId,
           carListing: {
             brand: data.carListing.brand,
             carType: data.carListing.carType,
@@ -88,6 +91,7 @@ const RentalDetailsPage = () => {
           rentalStartDate: data.rentalStartDate,
           rentalEndDate: data.rentalEndDate,
           userId: data.userId,
+          rentalStatus: data.rentalStatus,
         };
         setRental(mappedRental);
       } catch (error) {
@@ -106,17 +110,88 @@ const RentalDetailsPage = () => {
     navigate("/rentals");
   };
 
-  const handleCancelRental = () => {
+  const handleCancelRental = async () => {
     if (!id) return;
-    alert(`Anulowanie wypożyczenia o ID: ${id} (funkcjonalność do zaimplementowania)`);
+
+    const token = Cookies.get("token");
+    if (!token) {
+      setServerError("Brak tokena. Zaloguj się ponownie.");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://localhost:5001/api/CarRental/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Błąd podczas anulowania wypożyczenia.");
+      }
+
+      setServerError("Wypożyczenie zostało anulowane.");
+      setTimeout(() => navigate("/rentals"), 2000);
+    } catch (error) {
+      setServerError(
+        error instanceof Error ? error.message : "Błąd połączenia z serwerem."
+      );
+    }
   };
 
-  
+  const handleSubmitReview = async () => {
+    if (!id) return;
+    if (reviewRating < 1 || reviewRating > 5) {
+      setReviewError("Ocena musi być w zakresie 1-5.");
+      return;
+    }
+
+    const token = Cookies.get("token");
+    if (!token) {
+      setReviewError("Brak tokena. Zaloguj się ponownie.");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await fetch("https://localhost:5001/api/CarRental/review", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          carRentalId: parseInt(id),
+          rating: reviewRating,
+          comment: reviewComment,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Błąd podczas dodawania recenzji.");
+      }
+
+      setReviewSuccess("Recenzja została dodana pomyślnie!");
+      setReviewRating(0);
+      setReviewComment("");
+      setReviewError("");
+    } catch (error) {
+      setReviewError(
+        error instanceof Error ? error.message : "Błąd połączenia z serwerem."
+      );
+    }
+  };
+
   const calculateDuration = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   if (loading) {
@@ -172,7 +247,7 @@ const RentalDetailsPage = () => {
   }
 
   if (!rental) {
-    return null; // Shouldn't happen due to error handling, but added for safety
+    return null;
   }
 
   const duration = calculateDuration(rental.rentalStartDate, rental.rentalEndDate);
@@ -246,6 +321,9 @@ const RentalDetailsPage = () => {
               <p style={{ color: textColor }}>
                 <strong>Czas trwania:</strong> {duration} dni
               </p>
+              <p style={{ color: textColor }}>
+                <strong>Status:</strong> {rental.rentalStatus}
+              </p>
             </div>
             <div className="col-md-6 mb-2">
               <p className="mb-1" style={{ color: textColor }}>
@@ -286,15 +364,82 @@ const RentalDetailsPage = () => {
           </div>
         </motion.div>
 
-        <motion.button
-          onClick={handleCancelRental}
-          className="btn btn-danger w-100 rounded-pill text-white"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <FaTimes className="me-2" />
-          Anuluj wypożyczenie
-        </motion.button>
+        {rental.rentalStatus === "Ended" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="mb-4 p-3 rounded"
+            style={{
+              backgroundColor: theme === "dark" ? "#343a40" : "#f8f9fa",
+            }}
+          >
+            <h5 className="mb-3" style={{ color: textColor }}>
+              Wystaw recenzję
+            </h5>
+            {reviewSuccess && (
+              <div className="alert alert-success text-center mb-3">{reviewSuccess}</div>
+            )}
+            {reviewError && (
+              <div className={`alert ${errorColor} text-center mb-3`}>{reviewError}</div>
+            )}
+            <div className="mb-3">
+              <label className="form-label" style={{ color: textColor }}>
+                Ocena (1-5)
+              </label>
+              <div>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <FaStar
+                    key={star}
+                    className="me-1"
+                    style={{
+                      color: star <= reviewRating ? "#ffc107" : "#6c757d",
+                      cursor: "pointer",
+                      fontSize: "1.5em",
+                    }}
+                    onClick={() => setReviewRating(star)}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="form-label" style={{ color: textColor }}>
+                Komentarz
+              </label>
+              <textarea
+                className="form-control"
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                rows={4}
+                style={{ backgroundColor: theme === "dark" ? "#343a40" : "#fff", color: textColor }}
+              />
+            </div>
+            <motion.button
+              onClick={handleSubmitReview}
+              className={`btn ${buttonColor} w-100 rounded-pill text-white`}
+              style={{
+                backgroundColor: buttonBackgroundColor,
+                border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Wyślij recenzję
+            </motion.button>
+          </motion.div>
+        )}
+
+        {rental.rentalStatus !== "Ended" && (
+          <motion.button
+            onClick={handleCancelRental}
+            className="btn btn-danger w-100 rounded-pill text-white"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <FaTimes className="me-2" />
+            Anuluj wypożyczenie
+          </motion.button>
+        )}
       </motion.div>
     </div>
   );

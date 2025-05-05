@@ -15,6 +15,7 @@ import ProfilePage from "./pages/Profile";
 import FullscreenText from "./components/FullscreenText";
 import RentalsPage from "./pages/RentalsPage";
 import RentalDetailsPage from "./pages/RentalDetailsPage";
+import RentalHistoryPage from "./pages/RentalHistoryPage";
 
 const App = () => {
   const location = useLocation();
@@ -43,6 +44,7 @@ const App = () => {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/rentals" element={<RentalsPage />} />
               <Route path="/rentals/:id" element={<RentalDetailsPage />} /> 
+              <Route path="/rental-history" element={<RentalHistoryPage />} />
             </Routes>
           )}
         </AnimatePresence>

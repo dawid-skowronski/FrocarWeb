@@ -14,7 +14,7 @@ const containerStyle = {
 };
 
 const defaultCenter = {
-  lat: 52.2297, // Warszawa, Polska
+  lat: 52.2297, 
   lng: 21.0122,
 };
 
@@ -217,7 +217,7 @@ const AddCarPage = () => {
         const errorData = await response.text();
         throw new Error(errorData || "Nie udało się dodać samochodu.");
       }
-      setMessage("Samochód dodany pomyślnie!");
+      setMessage("Samochód dodany pomyślnie! Przekierowanie na strone głowna");
       setFormData({
         brand: "",
         engineCapacity: "",
@@ -229,6 +229,7 @@ const AddCarPage = () => {
         location: null,
       });
       setSelectedAddress("");
+      setTimeout(() => navigate("/"), 3000); 
     } catch (error) {
       setMessage(`Błąd: ${error instanceof Error ? error.message : "Nieznany błąd."}`);
     }
