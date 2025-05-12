@@ -29,6 +29,7 @@ interface Rental {
   rentalEndDate: string;
   rentalStatus: string;
   userId: number;
+  hasReview?: boolean; 
 }
 
 const RentalHistoryPage = () => {
@@ -97,28 +98,48 @@ const RentalHistoryPage = () => {
         throw new Error("Otrzymano nieprawidłowe dane z serwera. Spodziewano się listy wypożyczeń.");
       }
 
-      const mappedRentals: Rental[] = data.map((item: any) => ({
-        carRentalId: item.carRentalId,
-        carListing: {
-          id: item.carListing.id,
-          brand: item.carListing.brand,
-          carType: item.carListing.carType,
-          rentalPricePerDay: item.carListing.rentalPricePerDay,
-          engineCapacity: item.carListing.engineCapacity,
-          fuelType: item.carListing.fuelType,
-          seats: item.carListing.seats,
-          features: item.carListing.features || [],
-          latitude: item.carListing.latitude,
-          longitude: item.carListing.longitude,
-          userId: item.carListing.userId,
-          isAvailable: item.carListing.isAvailable,
-          isApproved: item.carListing.isApproved,
-        },
-        rentalStartDate: item.rentalStartDate,
-        rentalEndDate: item.rentalEndDate,
-        rentalStatus: item.rentalStatus,
-        userId: item.userId,
-      }));
+      const mappedRentals: Rental[] = await Promise.all(
+        data.map(async (item: any) => {
+          let hasReview = false;
+          const reviewResponse = await fetch(
+            `https://localhost:5001/api/CarRental/reviews/${item.carListing.id}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          if (reviewResponse.ok) {
+            const reviews = await reviewResponse.json();
+            hasReview = reviews.some(
+              (review: any) => review.carRental.carRentalId === item.carRentalId
+            );
+          }
+
+          return {
+            carRentalId: item.carRentalId,
+            carListing: {
+              id: item.carListing.id,
+              brand: item.carListing.brand,
+              carType: item.carListing.carType,
+              rentalPricePerDay: item.carListing.rentalPricePerDay,
+              engineCapacity: item.carListing.engineCapacity,
+              fuelType: item.carListing.fuelType,
+              seats: item.carListing.seats,
+              features: item.carListing.features || [],
+              latitude: item.carListing.latitude,
+              longitude: item.carListing.longitude,
+              userId: item.carListing.userId,
+              isAvailable: item.carListing.isAvailable,
+              isApproved: item.carListing.isApproved,
+            },
+            rentalStartDate: item.rentalStartDate,
+            rentalEndDate: item.rentalEndDate,
+            rentalStatus: item.rentalStatus,
+            userId: item.userId,
+            hasReview,
+          };
+        })
+      );
+
       setRentalsHistory(mappedRentals);
       if (mappedRentals.length === 0) {
         setMessage("Informacja: Nie masz jeszcze zakończonych wypożyczeń.");
@@ -140,6 +161,10 @@ const RentalHistoryPage = () => {
 
   const handleRetry = () => {
     fetchUserRentalHistory();
+  };
+
+  const handleViewDetails = (rentalId: number) => {
+    navigate(`/rentals/${rentalId}`);
   };
 
   return (
@@ -190,11 +215,16 @@ const RentalHistoryPage = () => {
                     <th style={tableCellStyle}>Data rozpoczęcia</th>
                     <th style={tableCellStyle}>Data zakończenia</th>
                     <th style={tableCellStyle}>Status</th>
+                    <th style={tableCellStyle}>Recenzja</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rentalsHistory.map((rental) => (
-                    <tr key={rental.carRentalId}>
+                    <tr
+                      key={rental.carRentalId}
+                      onClick={() => handleViewDetails(rental.carRentalId)}
+                      style={{ cursor: "pointer" }}
+                    >
                       <td style={tableCellStyle}>{rental.carListing.brand}</td>
                       <td style={tableCellStyle}>{rental.carListing.carType}</td>
                       <td style={tableCellStyle}>
@@ -212,6 +242,13 @@ const RentalHistoryPage = () => {
                         })}
                       </td>
                       <td style={tableCellStyle}>{rental.rentalStatus}</td>
+                      <td style={tableCellStyle}>
+                        {rental.hasReview ? (
+                          <span style={{ color: "green" }}>Wystawiono</span>
+                        ) : (
+                          <span style={{ color: "orange" }}>Oczekuje</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -23,6 +23,7 @@ interface CarListing {
   latitude: number;
   longitude: number;
   isApproved: boolean;
+  averageRating?: number; // Dodajemy opcjonalne pole dla średniej oceny
 }
 
 interface CarRentalRequest {
@@ -31,12 +32,21 @@ interface CarRentalRequest {
   rentalEndDate: string;
 }
 
+interface Review {
+  reviewId: number;
+  carRentalId: number;
+  userId: number;
+  rating: number;
+  comment: string;
+  user?: { id: number; userName: string }; // Przykładowa struktura użytkownika
+  carRental?: { carListingId: number };
+}
+
 interface DecodedToken {
   nameid: string;
 }
 
 const containerStyle = { width: "100%", height: "400px" };
-
 
 const debounce = (func: (...args: any[]) => void, delay: number) => {
   let timeoutId: number;
@@ -49,12 +59,15 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
 const RentCarPage = () => {
   const [listings, setListings] = useState<CarListing[]>([]);
   const [filteredListings, setFilteredListings] = useState<CarListing[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [showRentalModal, setShowRentalModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [selectedListing, setSelectedListing] = useState<CarListing | null>(null);
   const [selectedMapListing, setSelectedMapListing] = useState<CarListing | null>(null);
+  const [selectedReviewsListing, setSelectedReviewsListing] = useState<CarListing | null>(null);
   const [rentalData, setRentalData] = useState<CarRentalRequest>({
     carListingId: 0,
     rentalStartDate: "",
@@ -167,12 +180,10 @@ const RentCarPage = () => {
       );
 
       if (!response.ok) {
-        // W przypadku błędu, odpowiedź może być tekstem, a nie JSON-em
         const errorText = await response.text();
         throw new Error(errorText || `Błąd HTTP ${response.status}`);
       }
 
-      // Odpowiedź jest poprawna, parsujemy jako JSON
       const data = await response.json();
       const filteredListings = data.filter(
         (listing: CarListing) => listing.isAvailable && listing.userId !== currentUserId && listing.isApproved
@@ -180,12 +191,11 @@ const RentCarPage = () => {
       setListings(filteredListings);
       setFilteredListings(filteredListings);
 
-      // Batch reverse geocoding with a delay to avoid rate limits
       const addressResults = [];
       for (const listing of filteredListings) {
         const address = await reverseGeocode(listing.latitude, listing.longitude);
         addressResults.push({ id: listing.id, address });
-        await new Promise((resolve) => setTimeout(resolve, 100)); 
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
       setAddresses(
         addressResults.reduce((acc, { id, address }) => ({ ...acc, [id]: address }), {})
@@ -199,6 +209,30 @@ const RentCarPage = () => {
       setLoading(false);
     }
   }, [coordinates, currentUserId, navigate]);
+
+  const fetchReviewsForListing = async (listingId: number) => {
+    const token = Cookies.get("token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        `https://localhost:5001/api/CarRental/reviews/${listingId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Błąd HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setReviews(data);
+    } catch (error) {
+      setMessage(`Błąd: ${error instanceof Error ? error.message : "Nieznany błąd."}`);
+    }
+  };
 
   const handleRent = async () => {
     if (!selectedListing || !rentalData.rentalStartDate || !rentalData.rentalEndDate) {
@@ -244,9 +278,7 @@ const RentCarPage = () => {
       });
       if (!response.ok) {
         const errorData = await response.text();
-        throw new Error(
-          errorData || "Błąd wypożyczania."
-        );
+        throw new Error(errorData || "Błąd wypożyczania.");
       }
       setMessage("Wypożyczenie utworzone pomyślnie!");
       setShowRentalModal(false);
@@ -261,7 +293,6 @@ const RentCarPage = () => {
     if (success) fetchAvailableListings();
   };
 
-  // Debounce the search to prevent rapid successive calls
   const debouncedSearch = useCallback(debounce(handleSearch, 500), [city, coordinates]);
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -288,8 +319,7 @@ const RentCarPage = () => {
     if (filterPriceMin || filterPriceMax) {
       filtered = filtered.filter(
         (listing) =>
-          listing.rentalPricePerDay >= priceMin &&
-          listing.rentalPricePerDay <= priceMax
+          listing.rentalPricePerDay >= priceMin && listing.rentalPricePerDay <= priceMax
       );
     }
 
@@ -468,7 +498,8 @@ const RentCarPage = () => {
                       Miejsca: {listing.seats} <br />
                       Cena/dzień: {listing.rentalPricePerDay} zł <br />
                       Dodatki: {listing.features.join(", ") || "Brak"} <br />
-                      Lokalizacja: {addresses[listing.id] || "Ładowanie..."}
+                      Lokalizacja: {addresses[listing.id] || "Ładowanie..."} <br />
+                      Średnia ocena: {listing.averageRating?.toFixed(1) || "Brak ocen"}
                     </p>
                     <Button
                       variant={buttonColor}
@@ -484,6 +515,22 @@ const RentCarPage = () => {
                       }}
                     >
                       Wynajmij
+                    </Button>
+                    <Button
+                      variant={buttonColor}
+                      style={{
+                        backgroundColor: buttonBackgroundColor,
+                        border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                        marginLeft: "10px",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedReviewsListing(listing);
+                        fetchReviewsForListing(listing.id);
+                        setShowReviewsModal(true);
+                      }}
+                    >
+                      Pokaż recenzje
                     </Button>
                   </div>
                 </div>
@@ -530,6 +577,45 @@ const RentCarPage = () => {
               <Button
                 variant="secondary"
                 onClick={() => setShowMapModal(false)}
+                style={{ backgroundColor: buttonBackgroundColor, color: textColor }}
+              >
+                Zamknij
+              </Button>
+            </Modal.Footer>
+          </Modal>
+        )}
+        {selectedReviewsListing && (
+          <Modal
+            show={showReviewsModal}
+            onHide={() => setShowReviewsModal(false)}
+            size="lg"
+            dialogClassName={`theme-${theme}`}
+          >
+            <Modal.Header
+              closeButton
+              style={{ backgroundColor: cardBackgroundColor, color: textColor }}
+            >
+              <Modal.Title>Recenzje dla {selectedReviewsListing.brand}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body style={{ backgroundColor: cardBackgroundColor }}>
+              {reviews.length > 0 ? (
+                reviews.map((review) => (
+                  <div key={review.reviewId} className="mb-3 p-2 border rounded" style={{ backgroundColor: theme === "dark" ? "#2c2f33" : "#f8f9fa" }}>
+                    <p style={{ color: textColor }}>
+                      <strong>Użytkownik: {review.user?.userName || "Anonim"}</strong> <br />
+                      Ocena: {review.rating} / 5 <br />
+                      Komentarz: {review.comment || "Brak komentarza"} <br />
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p style={{ color: textColor }}>Brak recenzji dla tego ogłoszenia.</p>
+              )}
+            </Modal.Body>
+            <Modal.Footer style={{ backgroundColor: cardBackgroundColor }}>
+              <Button
+                variant="secondary"
+                onClick={() => setShowReviewsModal(false)}
                 style={{ backgroundColor: buttonBackgroundColor, color: textColor }}
               >
                 Zamknij

@@ -23,6 +23,7 @@ interface Rental {
   rentalEndDate: string;
   userId: number;
   rentalStatus: string;
+  hasReview?: boolean;
 }
 
 const RentalDetailsPage = () => {
@@ -46,68 +47,89 @@ const RentalDetailsPage = () => {
     buttonBorderColor,
   } = useThemeStyles();
 
-  useEffect(() => {
-    const fetchRentalDetails = async () => {
-      if (!id) {
-        setServerError("Brak ID wypożyczenia w URL.");
-        setLoading(false);
-        return;
+  const fetchRentalDetails = async () => {
+    if (!id) {
+      setServerError("Brak ID wypożyczenia w URL.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setServerError("");
+    setReviewSuccess("");
+
+    const token = Cookies.get("token");
+    if (!token) {
+      setServerError("Brak tokena. Zaloguj się ponownie.");
+      setLoading(false);
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://localhost:5001/api/CarRental/${id}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Błąd podczas pobierania szczegółów wypożyczenia.");
       }
 
-      setLoading(true);
-      setServerError("");
+      const data = await response.json();
+      const mappedRental: Rental = {
+        id: data.carRentalId,
+        carListing: {
+          brand: data.carListing.brand,
+          carType: data.carListing.carType,
+          rentalPricePerDay: data.carListing.rentalPricePerDay,
+          engineCapacity: data.carListing.engineCapacity,
+          fuelType: data.carListing.fuelType,
+          seats: data.carListing.seats,
+          features: data.carListing.features || [],
+        },
+        rentalStartDate: data.rentalStartDate,
+        rentalEndDate: data.rentalEndDate,
+        userId: data.userId,
+        rentalStatus: data.rentalStatus,
+      };
 
-      const token = Cookies.get("token");
-      if (!token) {
-        setServerError("Brak tokena. Zaloguj się ponownie.");
-        setLoading(false);
-        navigate("/login");
-        return;
-      }
-
-      try {
-        const response = await fetch(`https://localhost:5001/api/CarRental/${id}`, {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Błąd podczas pobierania szczegółów wypożyczenia.");
-        }
-
-        const data = await response.json();
-        const mappedRental: Rental = {
-          id: data.carRentalId,
-          carListing: {
-            brand: data.carListing.brand,
-            carType: data.carListing.carType,
-            rentalPricePerDay: data.carListing.rentalPricePerDay,
-            engineCapacity: data.carListing.engineCapacity,
-            fuelType: data.carListing.fuelType,
-            seats: data.carListing.seats,
-            features: data.carListing.features || [],
-          },
-          rentalStartDate: data.rentalStartDate,
-          rentalEndDate: data.rentalEndDate,
-          userId: data.userId,
-          rentalStatus: data.rentalStatus,
-        };
-        setRental(mappedRental);
-      } catch (error) {
-        setServerError(
-          error instanceof Error ? error.message : "Błąd połączenia z serwerem."
+      if (mappedRental.rentalStatus === "Ended") {
+        const reviewResponse = await fetch(
+          `https://localhost:5001/api/CarRental/reviews/${data.carListing.id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
         );
-      } finally {
-        setLoading(false);
+        if (reviewResponse.ok) {
+          const reviews = await reviewResponse.json();
+          const hasReview = reviews.some(
+            (review: any) => review.carRental.carRentalId === data.carRentalId
+          );
+          mappedRental.hasReview = hasReview;
+          if (hasReview) {
+            setReviewSuccess("Recenzja dla tego wypożyczenia została już wystawiona.");
+          }
+        }
       }
-    };
 
+      setRental(mappedRental);
+    } catch (error) {
+      setServerError(
+        error instanceof Error ? error.message : "Błąd połączenia z serwerem."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchRentalDetails();
   }, [id, navigate]);
 
   const handleBack = () => {
-    navigate("/rentals");
+    navigate(-1); 
   };
 
   const handleCancelRental = async () => {
@@ -135,7 +157,7 @@ const RentalDetailsPage = () => {
       }
 
       setServerError("Wypożyczenie zostało anulowane.");
-      setTimeout(() => navigate("/rentals"), 2000);
+      setTimeout(() => navigate(-1), 2000); 
     } catch (error) {
       setServerError(
         error instanceof Error ? error.message : "Błąd połączenia z serwerem."
@@ -144,9 +166,13 @@ const RentalDetailsPage = () => {
   };
 
   const handleSubmitReview = async () => {
-    if (!id) return;
-    if (reviewRating < 1 || reviewRating > 5) {
-      setReviewError("Ocena musi być w zakresie 1-5.");
+    if (!id) {
+      setReviewError("Brak ID wypożyczenia.");
+      return;
+    }
+
+    if (reviewRating < 1 || reviewRating > 5 || !Number.isInteger(reviewRating)) {
+      setReviewError("Ocena musi być liczbą całkowitą w zakresie 1-5.");
       return;
     }
 
@@ -157,6 +183,12 @@ const RentalDetailsPage = () => {
       return;
     }
 
+    const reviewData = {
+      CarRentalId: parseInt(id),
+      Rating: reviewRating,
+      Comment: reviewComment || "",
+    };
+
     try {
       const response = await fetch("https://localhost:5001/api/CarRental/review", {
         method: "POST",
@@ -164,26 +196,33 @@ const RentalDetailsPage = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          carRentalId: parseInt(id),
-          rating: reviewRating,
-          comment: reviewComment,
-        }),
+        body: JSON.stringify(reviewData),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Błąd podczas dodawania recenzji.");
+        let errorMessage = "Błąd podczas dodawania recenzji.";
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } else {
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
-      setReviewSuccess("Recenzja została dodana pomyślnie!");
+      const responseData = await response.json();
+      setReviewSuccess(responseData.message || "Recenzja została dodana pomyślnie!");
       setReviewRating(0);
       setReviewComment("");
       setReviewError("");
+      setTimeout(() => navigate("/profile"), 2000); // Redirect to profile after review
     } catch (error) {
       setReviewError(
         error instanceof Error ? error.message : "Błąd połączenia z serwerem."
       );
+      console.error("Review submission error:", error);
     }
   };
 
@@ -364,7 +403,7 @@ const RentalDetailsPage = () => {
           </div>
         </motion.div>
 
-        {rental.rentalStatus === "Ended" && (
+        {rental.rentalStatus === "Ended" && !reviewSuccess && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -377,9 +416,6 @@ const RentalDetailsPage = () => {
             <h5 className="mb-3" style={{ color: textColor }}>
               Wystaw recenzję
             </h5>
-            {reviewSuccess && (
-              <div className="alert alert-success text-center mb-3">{reviewSuccess}</div>
-            )}
             {reviewError && (
               <div className={`alert ${errorColor} text-center mb-3`}>{reviewError}</div>
             )}
@@ -427,6 +463,10 @@ const RentalDetailsPage = () => {
               Wyślij recenzję
             </motion.button>
           </motion.div>
+        )}
+
+        {reviewSuccess && (
+          <div className="alert alert-success text-center mb-3">{reviewSuccess}</div>
         )}
 
         {rental.rentalStatus !== "Ended" && (
