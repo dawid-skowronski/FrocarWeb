@@ -49,7 +49,7 @@ interface DecodedToken {
 const containerStyle = { width: "100%", height: "400px" };
 
 const debounce = (func: (...args: any[]) => void, delay: number) => {
-  let timeoutId: number;
+  let timeoutId: NodeJS.Timeout; 
   return (...args: any[]) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func(...args), delay);
