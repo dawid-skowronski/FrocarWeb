@@ -1,49 +1,77 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useThemeStyles } from "../styles/useThemeStyles";
 
-const LoginPage = () => {
-  const [formData, setFormData] = useState({ username: "", password: "" });
+const ResetPasswordPage = () => {
+  const [formData, setFormData] = useState({ newPassword: "", confirmPassword: "" });
   const [serverError, setServerError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const { theme, backgroundColor, cardBackgroundColor, textColor, buttonColor, errorColor, borderColor, inputBackgroundColor, switchColor, buttonBackgroundColor, buttonBorderColor } = useThemeStyles();
+  const { theme, backgroundColor, cardBackgroundColor, textColor, buttonColor, errorColor, borderColor, inputBackgroundColor, buttonBackgroundColor, buttonBorderColor } = useThemeStyles();
+
+  
+  const token = searchParams.get("token");
+
+  useEffect(() => {
+    if (!token) {
+      setServerError("Brak tokenu resetującego. Spróbuj ponownie wygenerować link.");
+    }
+  }, [token]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setServerError("");
+    setSuccessMessage("");
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      if (!formData.username || !formData.password) {
-        setServerError("Nazwa użytkownika i hasło są wymagane.");
+      if (!token) {
+        setServerError("Brak tokenu resetującego.");
         setLoading(false);
         return;
       }
-      const response = await fetch("https://localhost:5001/api/account/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        setServerError(data.message || "Niepoprawne dane logowania.");
+
+      if (!formData.newPassword || !formData.confirmPassword) {
+        setServerError("Nowe hasło i potwierdzenie hasła są wymagane.");
+        setLoading(false);
         return;
       }
+
+      if (formData.newPassword !== formData.confirmPassword) {
+        setServerError("Hasła nie są zgodne.");
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch("https://localhost:5001/api/account/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, newPassword: formData.newPassword }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setServerError(data.message || "Nie udało się zresetować hasła.");
+        setLoading(false);
+        return;
+      }
+
       const data = await response.json();
-      login(data.token, rememberMe);
-      navigate("/");
+      setSuccessMessage(data.message || "Hasło zostało zresetowane pomyślnie.");
+      setFormData({ newPassword: "", confirmPassword: "" });
+
+      
+      setTimeout(() => navigate("/login"), 2000);
     } catch (error) {
       setServerError("Błąd połączenia z serwerem.");
-    } finally {
       setLoading(false);
     }
   };
@@ -63,44 +91,33 @@ const LoginPage = () => {
         className="card shadow-lg p-4 rounded"
         style={{ width: "400px", backgroundColor: cardBackgroundColor, color: textColor }}
       >
-        <h2 className="text-center mb-4" style={{ color: textColor }}>Logowanie</h2>
+        <h2 className="text-center mb-4" style={{ color: textColor }}>Resetuj hasło</h2>
         {serverError && <div className={`alert ${errorColor} text-center mb-3`}>{serverError}</div>}
+        {successMessage && <div className="alert alert-success text-center mb-3">{successMessage}</div>}
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="form-label" style={{ color: textColor }}>Nazwa użytkownika</label>
+            <label className="form-label" style={{ color: textColor }}>Nowe hasło</label>
             <input
-              type="text"
-              name="username"
+              type="password"
+              name="newPassword"
               className="form-control rounded-pill"
               style={inputStyle}
-              placeholder="Wpisz nazwę użytkownika"
-              value={formData.username}
+              placeholder="Wpisz nowe hasło"
+              value={formData.newPassword}
               onChange={handleChange}
             />
           </div>
           <div className="mb-3">
-            <label className="form-label" style={{ color: textColor }}>Hasło</label>
+            <label className="form-label" style={{ color: textColor }}>Potwierdź hasło</label>
             <input
               type="password"
-              name="password"
+              name="confirmPassword"
               className="form-control rounded-pill"
               style={inputStyle}
-              placeholder="Wpisz hasło"
-              value={formData.password}
+              placeholder="Potwierdź nowe hasło"
+              value={formData.confirmPassword}
               onChange={handleChange}
             />
-          </div>
-          <div className="form-check form-switch mb-3 d-flex align-items-center">
-            <input
-              className="form-check-input custom-switch"
-              type="checkbox"
-              role="switch"
-              id="rememberMe"
-              checked={rememberMe}
-              onChange={() => setRememberMe(!rememberMe)}
-              style={{ backgroundColor: switchColor, borderColor: switchColor }}
-            />
-            <label className="form-check-label ms-2" htmlFor="rememberMe" style={{ color: textColor }}>Zapamiętaj mnie</label>
           </div>
           <motion.button
             type="submit"
@@ -111,9 +128,9 @@ const LoginPage = () => {
             }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            disabled={loading}
+            disabled={loading || !token}
           >
-            {loading ? "Logowanie..." : "Zaloguj się"}
+            {loading ? "Resetowanie..." : "Zresetuj hasło"}
           </motion.button>
         </form>
         <div className="text-center mt-3">
@@ -121,11 +138,11 @@ const LoginPage = () => {
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              navigate("/request-password-reset");
+              navigate("/login");
             }}
             style={{ color: buttonColor, textDecoration: "underline" }}
           >
-            Zapomniałeś hasła?
+            Powrót do logowania
           </a>
         </div>
       </motion.div>
@@ -133,4 +150,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default ResetPasswordPage;

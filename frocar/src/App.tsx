@@ -1,4 +1,3 @@
-// AppContent.tsx
 import React, { useState, useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
@@ -21,6 +20,8 @@ import RentalDetailsPage from "./pages/RentalDetailsPage";
 import RentalHistoryPage from "./pages/RentalHistoryPage";
 import Cookies from 'js-cookie';
 import markNotificationAsRead from './services/markNotificationAsRead';
+import RequestPasswordResetPage from "./pages/RequestPasswordResetPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 interface Notification {
   message: string;
@@ -95,6 +96,8 @@ const AppContent: React.FC = () => {
             <Route path="/rentals" element={<RentalsPage />} />
             <Route path="/rentals/:id" element={<RentalDetailsPage />} />
             <Route path="/rental-history" element={<RentalHistoryPage />} />
+            <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Routes>
         )}
       </AnimatePresence>
