@@ -79,7 +79,7 @@ const RentalHistoryPage = () => {
         } else if (response.status === 404) {
           setMessage("Błąd: Historia wypożyczeń nie została znaleziona.");
         } else if (response.status >= 500) {
-          setMessage(`Błąd: Problem po stronie serwera. ${errorText || "Spróbuj ponownie później."}`);
+          setMessage("Błąd: Nie udało się pobrać historii wypożyczeń. Spróbuj ponownie później lub skontaktuj się z pomocą techniczną.");
         } else {
           setMessage(`Błąd: Nie udało się pobrać historii wypożyczeń. ${errorText || "Sprawdź połączenie."}`);
         }
