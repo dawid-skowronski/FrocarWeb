@@ -14,9 +14,9 @@
 | RENT-09   | Użytkownik może zobaczyć lokalizację pojazdu na mapie.  | ✅    | ✅   | ✅      |         |
 | RENT-10   | Użytkownik może zarejestrować się w systemie.           | ✅    | ✅   | ✅      |         |
 | RENT-11   | Użytkownik może zalogować się w systemie.               | ✅    | ✅   | ✅      |         |
-| RENT-12   | Użytkownik może zresetować swoje hasło.                 |🛠️   |🛠️  |🛠️     |         |
+| RENT-12   | Użytkownik może zresetować swoje hasło.                 |✅   |✅  |✅     |         |
 | RENT-13   | Użytkownik może wynająć pojazd na określony czas.       | ✅   | ✅   | ✅      |         |
-| RENT-14   | Użytkownik otrzymuje powiadomienia o statusie rezerwacji. |✅   |✅  | 🛠️      |         |
+| RENT-14   | Użytkownik otrzymuje powiadomienia o statusie rezerwacji. |✅   |✅  | ✅      |         |
 | RENT-15   | Użytkownik widzi historię swoich wynajmów.                 | ✅  | ✅      |   ✅        |
 | RENT-16   | Właściciel pojazdu może dodać swój pojazd do wynajmu.   | ✅    | ✅   | ✅      |         |
 | RENT-17   | Właściciel może edytować i usuwać swoje ogłoszenia.     | ✅    | ✅   | ✅      |         |
