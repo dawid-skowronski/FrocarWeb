@@ -9,12 +9,17 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import Cookies from "js-cookie";
 
+// Importujemy nasze strategie filtrowania i funkcję kontekstu
+import { filterByBrand, filterByAvailability, filterByFuelType, filterByMinSeats, filterByMaxPrice } from '../utils/filterStrategies';
+import { applyFilters, FilterRule } from '../utils/carFilterContext';
+
 const containerStyle = {
   width: "100%",
   height: "500px",
 };
 
-interface CarListing {
+// WAŻNE: Dodaj 'export' przed interfejsem CarListing
+export interface CarListing {
   id: number;
   brand: string;
   engineCapacity: number;
@@ -45,8 +50,13 @@ const ProfilePage = () => {
   const [addresses, setAddresses] = useState<{ [key: number]: string }>({});
   const [newUsername, setNewUsername] = useState<string>("");
   const [username, setUsername] = useState<string>("");
+
+  // Stany dla filtrów
   const [filterBrand, setFilterBrand] = useState<string>("");
-  const [filterAvailability, setFilterAvailability] = useState<string>("all");
+  const [filterAvailability, setFilterAvailability] = useState<"all" | "available" | "unavailable">("all");
+  const [filterFuelType, setFilterFuelType] = useState<string>("");
+  const [filterMinSeats, setFilterMinSeats] = useState<number | ''>('');
+  const [filterMaxPrice, setFilterMaxPrice] = useState<number | ''>('');
 
   const { theme } = useTheme();
   const {
@@ -63,7 +73,7 @@ const ProfilePage = () => {
   } = useThemeStyles();
 
   const navigate = useNavigate();
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const googleMapsApiKey = import.meta.env.VITE_Maps_API_KEY;
 
   const getUsernameFromToken = () => {
     const token = Cookies.get("token");
@@ -130,7 +140,7 @@ const ProfilePage = () => {
       const data: CarListing[] = await response.json();
       const approvedListings = data.filter(car => car.isApproved);
       setCarListings(approvedListings);
-      setFilteredListings(approvedListings);
+      setFilteredListings(approvedListings); // Początkowo filteredListings są takie same jak carListings
 
       const addressPromises = approvedListings.map((car) =>
         reverseGeocode(car.latitude, car.longitude).then((address) => ({
@@ -233,8 +243,9 @@ const ProfilePage = () => {
         throw new Error("Nie udało się usunąć samochodu.");
       }
 
-      setCarListings(carListings.filter((car) => car.id !== listingToDelete));
-      setFilteredListings(filteredListings.filter((car) => car.id !== listingToDelete));
+      // Aktualizuj obie listy po usunięciu
+      setCarListings(prev => prev.filter((car) => car.id !== listingToDelete));
+      setFilteredListings(prev => prev.filter((car) => car.id !== listingToDelete));
       setMessage("Samochód został usunięty pomyślnie.");
       setShowDeleteModal(false);
       setListingToDelete(null);
@@ -271,6 +282,7 @@ const ProfilePage = () => {
         throw new Error("Nie udało się zaktualizować dostępności.");
       }
 
+      // Aktualizuj obie listy po zmianie dostępności
       setCarListings((prevListings) =>
         prevListings.map((car) =>
           car.id === id ? { ...car, isAvailable: newAvailability } : car
@@ -319,7 +331,8 @@ const ProfilePage = () => {
       setAddresses((prev) => ({ ...prev, [selectedListing.id]: updatedAddress }));
       setMessage("Ogłoszenie zaktualizowane pomyślnie!");
       setShowEditModal(false);
-      fetchUserCarListings();
+      // Ponowne pobranie, aby upewnić się, że dane są świeże, lub ręczna aktualizacja stanu
+      fetchUserCarListings(); 
     } catch (error: unknown) {
       if (error instanceof Error) {
         setMessage(`Błąd: ${error.message}`);
@@ -370,20 +383,32 @@ const ProfilePage = () => {
     }
   };
 
+  // Zaktualizowany useEffect do filtrowania
   useEffect(() => {
-    let filtered = carListings;
+    const filters: FilterRule[] = [];
+
     if (filterBrand) {
-      filtered = filtered.filter((car) =>
-        car.brand.toLowerCase().includes(filterBrand.toLowerCase())
-      );
+      filters.push({ strategy: filterByBrand, value: filterBrand });
     }
     if (filterAvailability !== "all") {
-      filtered = filtered.filter((car) =>
-        filterAvailability === "available" ? car.isAvailable : !car.isAvailable
-      );
+      filters.push({ strategy: filterByAvailability, value: filterAvailability });
     }
-    setFilteredListings(filtered);
-  }, [filterBrand, filterAvailability, carListings]);
+    if (filterFuelType) {
+        filters.push({ strategy: filterByFuelType, value: filterFuelType });
+    }
+    // Dodaj warunek, aby upewnić się, że wartość nie jest pustym stringiem
+    if (filterMinSeats !== '' && !isNaN(filterMinSeats)) {
+        filters.push({ strategy: filterByMinSeats, value: filterMinSeats });
+    }
+    // Dodaj warunek, aby upewnić się, że wartość nie jest pustym stringiem
+    if (filterMaxPrice !== '' && !isNaN(filterMaxPrice)) {
+        filters.push({ strategy: filterByMaxPrice, value: filterMaxPrice });
+    }
+
+    // Używamy funkcji kontekstu do zastosowania wszystkich filtrów
+    const currentFilteredListings = applyFilters(carListings, filters);
+    setFilteredListings(currentFilteredListings);
+  }, [filterBrand, filterAvailability, filterFuelType, filterMinSeats, filterMaxPrice, carListings]);
 
   useEffect(() => {
     const currentUsername = getUsernameFromToken();
@@ -451,7 +476,7 @@ const ProfilePage = () => {
 
         <div className="mb-4">
           <h4 style={{ color: textColor }}>Filtruj samochody</h4>
-          <div className="d-flex gap-3">
+          <div className="d-flex gap-3 flex-wrap">
             <div>
               <label className="form-label" style={{ color: textColor }}>
                 Marka
@@ -472,13 +497,57 @@ const ProfilePage = () => {
               <select
                 className="form-control"
                 value={filterAvailability}
-                onChange={(e) => setFilterAvailability(e.target.value)}
+                onChange={(e) => setFilterAvailability(e.target.value as "all" | "available" | "unavailable")}
                 style={inputStyle}
               >
                 <option value="all">Wszystkie</option>
                 <option value="available">Dostępne</option>
                 <option value="unavailable">Niedostępne</option>
               </select>
+            </div>
+            <div>
+                <label className="form-label" style={{ color: textColor }}>
+                    Rodzaj paliwa
+                </label>
+                <select
+                    className="form-control"
+                    value={filterFuelType}
+                    onChange={(e) => setFilterFuelType(e.target.value)}
+                    style={inputStyle}
+                >
+                    <option value="">Wszystkie</option>
+                    <option value="benzyna">Benzyna</option>
+                    <option value="diesel">Diesel</option>
+                    <option value="elektryczny">Elektryczny</option>
+                    <option value="hybryda">Hybryda</option>
+                </select>
+            </div>
+            <div>
+                <label className="form-label" style={{ color: textColor }}>
+                    Min. miejsc
+                </label>
+                <input
+                    type="number"
+                    className="form-control"
+                    value={filterMinSeats}
+                    onChange={(e) => setFilterMinSeats(parseFloat(e.target.value) || '')}
+                    placeholder="Min. miejsca"
+                    style={inputStyle}
+                />
+            </div>
+            <div>
+                <label className="form-label" style={{ color: textColor }}>
+                    Max. cena/dzień
+                </label>
+                <input
+                    type="number"
+                    step="0.01"
+                    className="form-control"
+                    value={filterMaxPrice}
+                    onChange={(e) => setFilterMaxPrice(parseFloat(e.target.value) || '')}
+                    placeholder="Max. cena"
+                    style={inputStyle}
+                />
             </div>
           </div>
         </div>
