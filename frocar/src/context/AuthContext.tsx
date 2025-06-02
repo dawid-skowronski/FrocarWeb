@@ -4,7 +4,7 @@ import Cookies from "js-cookie";
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (token: string, rememberMe: boolean) => void;
+  login: (token: string) => void; // Usunięto parametr rememberMe
   logout: () => void;
 }
 
@@ -21,9 +21,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // Funkcja logowania zapisująca token w ciasteczku
-  const login = (token: string, rememberMe: boolean) => {
-    const expires = rememberMe ? 7 : undefined; // 7 dni ważności, jeśli "Zapamiętaj mnie" jest włączone
-    Cookies.set("token", token, { expires });
+  const login = (token: string) => {
+    Cookies.set("token", token); // Usunięto expires, ciasteczko jest sesyjne
     setIsAuthenticated(true);
   };
 

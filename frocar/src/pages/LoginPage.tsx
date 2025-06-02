@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { motion } from "framer-motion";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate } from "react-router-dom";
@@ -9,17 +9,22 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const { theme, backgroundColor, cardBackgroundColor, textColor, buttonColor, errorColor, borderColor, inputBackgroundColor, switchColor, buttonBackgroundColor, buttonBorderColor } = useThemeStyles();
+  const { isAuthenticated, login } = useAuth();
+  const { theme, backgroundColor, cardBackgroundColor, textColor, buttonColor, errorColor, borderColor, inputBackgroundColor, buttonBackgroundColor, buttonBorderColor } = useThemeStyles();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setServerError("");
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -39,7 +44,7 @@ const LoginPage = () => {
         return;
       }
       const data = await response.json();
-      login(data.token, rememberMe);
+      login(data.token);
       navigate("/");
     } catch (error) {
       setServerError("Błąd połączenia z serwerem.");
@@ -89,18 +94,6 @@ const LoginPage = () => {
               value={formData.password}
               onChange={handleChange}
             />
-          </div>
-          <div className="form-check form-switch mb-3 d-flex align-items-center">
-            <input
-              className="form-check-input custom-switch"
-              type="checkbox"
-              role="switch"
-              id="rememberMe"
-              checked={rememberMe}
-              onChange={() => setRememberMe(!rememberMe)}
-              style={{ backgroundColor: switchColor, borderColor: switchColor }}
-            />
-            <label className="form-check-label ms-2" htmlFor="rememberMe" style={{ color: textColor }}>Zapamiętaj mnie</label>
           </div>
           <motion.button
             type="submit"

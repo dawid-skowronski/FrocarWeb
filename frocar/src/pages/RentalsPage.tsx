@@ -42,7 +42,7 @@ const RentalsPage = () => {
 
     const token = Cookies.get("token");
     if (!token) {
-      setServerMessage("Błąd: Nie jesteś zalogowany. Proszę się zalogować, aby zobaczyć wypożyczenia.");
+      setServerMessage("Nie jesteś zalogowany. Proszę się zalogować, aby zobaczyć wypożyczenia.");
       setLoading(false);
       setTimeout(() => navigate("/login"), 2000);
       return;
@@ -62,7 +62,7 @@ const RentalsPage = () => {
           setTimeout(() => navigate("/login"), 2000);
           return;
         } else if (response.status === 404) {
-          setServerMessage("Błąd: Wypożyczenia nie zostały znalezione.");
+          setServerMessage("Wypożyczenia nie zostały znalezione.");
         } else if (response.status >= 500) {
           setServerMessage(`Błąd: Problem po stronie serwera. ${errorText || "Spróbuj ponownie później."}`);
         } else {

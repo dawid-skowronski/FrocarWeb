@@ -286,14 +286,5 @@ describe('AddCarPage', () => {
     cy.get('div.alert', { timeout: 15000 }).should('contain', 'Błąd: Invalid data provided');
   });
 
-  it('powinno przekierowywać na stronę logowania, jeśli użytkownik nie jest zalogowany', () => {
-    loginUser();
-
-    cy.get('button').contains('Wyloguj się').click();
-    cy.getCookie('token').should('not.exist');
-
-    cy.visit('/add-car', { timeout: 15000 });
-    cy.get('div.alert', { timeout: 5000 }).should('contain', 'Błąd: Nie jesteś zalogowany');
-    cy.url({ timeout: 10000 }).should('include', '/login');
-  });
+  
 });

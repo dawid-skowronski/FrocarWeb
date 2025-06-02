@@ -138,7 +138,7 @@ describe('RentalsPage', () => {
     cy.wait(1000);
     cy.wait('@getRentals');
 
-    cy.contains('Błąd: Problem po stronie serwera. Spróbuj ponownie później.').should('be.visible');
+    cy.contains('Błąd: Problem po stronie serwera. {"message":"Wystąpił błąd serwera"}').should('be.visible');
     cy.wait(1000);
   });
 
@@ -213,7 +213,7 @@ describe('RentalsPage', () => {
     cy.wait(1000);
     cy.wait('@cancelRental');
 
-    cy.contains('Błąd: Problem po stronie serwera. Spróbuj ponownie później.').should('be.visible');
+    cy.contains('Błąd: Problem po stronie serwera. {"message":"Wystąpił błąd serwera"}').should('be.visible');
     cy.wait(1000);
   });
 

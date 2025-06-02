@@ -1,86 +1,88 @@
 describe('LoginPage', () => {
-  // Obsługa nieoczekiwanych wyjątków
-  Cypress.on('uncaught:exception', (err, runnable) => {
-    console.error('Nieoczekiwany wyjątek:', err.message);
-    return false; // Zapobiega przerwaniu testów
-  });
-
   beforeEach(() => {
-    // Mock endpointu logowania przed każdym testem
-    cy.intercept('POST', 'https://localhost:5001/api/Account/login', {
-      statusCode: 200,
-      body: { message: 'Logowanie udane', token: 'mock-jwt-token' },
-    }).as('login');
+    cy.intercept('POST', 'https://localhost:5001/api/account/login', (req) => {
+      if (req.body.username === 'validUser' && req.body.password === 'validPass') {
+        req.reply({
+          statusCode: 200,
+          body: { token: 'fake-jwt-token' }
+        });
+      } else if (req.body.username === 'lockedUser') {
+        req.reply({
+          statusCode: 403,
+          body: { message: 'Konto jest zablokowane' }
+        });
+      } else {
+        req.reply({
+          statusCode: 401,
+          body: { message: 'Niepoprawne dane logowania' }
+        });
+      }
+    }).as('loginRequest');
 
-    // Odwiedzanie strony logowania z opóźnieniem
-    cy.wait(2000); // Czekaj 2 sekundy na uruchomienie serwera
     cy.visit('/login');
   });
 
-  it('powinno poprawnie renderować formularz logowania', () => {
-    cy.get('h2').should('have.text', 'Logowanie');
-    cy.get('input[name="username"]').should('be.visible').and('have.attr', 'placeholder', 'Wpisz nazwę użytkownika');
-    cy.get('input[name="password"]').should('be.visible').and('have.attr', 'placeholder', 'Wpisz hasło');
-    cy.get('input#rememberMe').should('be.visible').and('not.be.checked');
-    cy.get('label[for="rememberMe"]').should('have.text', 'Zapamiętaj mnie');
-    cy.get('button[type="submit"]').should('be.visible').and('have.text', 'Zaloguj się');
+  it('powinien wyświetlać formularz logowania', () => {
+    cy.get('h2').should('contain', 'Logowanie');
+    cy.get('input[name="username"]').should('exist');
+    cy.get('input[name="password"]').should('exist');
+    cy.get('button[type="submit"]').should('contain', 'Zaloguj się');
+    cy.get('a').contains('Zapomniałeś hasła?').should('exist');
   });
 
-  it('powinno wyświetlać błąd, gdy pola są puste', () => {
+  it('powinien wyświetlać błąd przy pustym formularzu', () => {
     cy.get('button[type="submit"]').click();
-    cy.get('.alert').should('be.visible').and('contain', 'Nazwa użytkownika i hasło są wymagane.');
+    cy.get('.alert').should('contain', 'Nazwa użytkownika i hasło są wymagane.');
   });
 
-  it('powinno pomyślnie zalogować użytkownika i przekierować na stronę główną', () => {
-    cy.get('input[name="username"]').type('Kozub');
-    cy.get('input[name="password"]').type('Qwerty123!');
-    cy.get('input#rememberMe').check();
+  it('powinien wyświetlać błąd przy niepoprawnych danych', () => {
+    cy.get('input[name="username"]').type('invalidUser');
+    cy.get('input[name="password"]').type('wrongPass');
     cy.get('button[type="submit"]').click();
 
-    // Oczekiwanie na żądanie logowania
-    cy.wait('@login').its('request.body').should('deep.equal', {
-      username: 'Kozub',
-      password: 'Qwerty123!',
-    });
-
-    // Sprawdzenie przekierowania
-    cy.url({ timeout: 10000 }).should('eq', 'http://localhost:5173/');
+    cy.wait('@loginRequest');
+    cy.get('.alert').should('contain', 'Niepoprawne dane logowania');
   });
 
-  it('powinno wyświetlać błąd, gdy logowanie się nie powiedzie', () => {
-    // Mock nieudanego logowania
-    cy.intercept('POST', 'https://localhost:5001/api/Account/login', {
-      statusCode: 401,
-      body: { message: 'Niepoprawne dane logowania.' },
-    }).as('loginFail');
-
-    cy.get('input[name="username"]').type('Kozub');
-    cy.get('input[name="password"]').type('ZłeHasło');
+  it('powinien zalogować się przy poprawnych danych', () => {
+    cy.get('input[name="username"]').type('validUser');
+    cy.get('input[name="password"]').type('validPass');
     cy.get('button[type="submit"]').click();
 
-    cy.wait('@loginFail');
-    cy.get('.alert').should('be.visible').and('contain', 'Niepoprawne dane logowania.');
+    cy.wait('@loginRequest');
+    cy.url().should('include', '/');
   });
 
-  it('powinno wyświetlać błąd połączenia z serwerem', () => {
-    // Mock błędu sieciowego
-    cy.intercept('POST', 'https://localhost:5001/api/Account/login', {
-      forceNetworkError: true,
-    }).as('loginError');
-
-    cy.get('input[name="username"]').type('Kozub');
-    cy.get('input[name="password"]').type('Qwerty123!');
+  it('powinien wyświetlać specjalny błąd dla zablokowanego konta', () => {
+    cy.get('input[name="username"]').type('lockedUser');
+    cy.get('input[name="password"]').type('anyPass');
     cy.get('button[type="submit"]').click();
 
-    cy.wait('@loginError');
-    cy.get('.alert').should('be.visible').and('contain', 'Błąd połączenia z serwerem.');
+    cy.wait('@loginRequest');
+    cy.get('.alert').should('contain', 'Konto jest zablokowane');
   });
 
-  it('powinno zmieniać stan "Zapamiętaj mnie"', () => {
-    cy.get('input#rememberMe').should('not.be.checked');
-    cy.get('input#rememberMe').check();
-    cy.get('input#rememberMe').should('be.checked');
-    cy.get('input#rememberMe').uncheck();
-    cy.get('input#rememberMe').should('not.be.checked');
+  it('powinien przekierować do strony resetu hasła', () => {
+    cy.get('a').contains('Zapomniałeś hasła?').click();
+    cy.url().should('include', '/request-password-reset');
+  });
+
+  it('powinien wyłączyć przycisk podczas ładowania', () => {
+    cy.intercept('POST', 'https://localhost:5001/api/account/login', {
+      delay: 1000,
+      statusCode: 200,
+      body: { token: 'fake-jwt-token' }
+    }).as('slowLogin');
+
+    cy.get('input[name="username"]').type('validUser');
+    cy.get('input[name="password"]').type('validPass');
+    cy.get('button[type="submit"]').click();
+
+    cy.get('button[type="submit"]').should('be.disabled');
+    cy.get('button[type="submit"]').should('contain', 'Logowanie...');
+  });
+
+  it('powinien wyświetlać odpowiednie style dla różnych motywów', () => {
+    cy.get('.card').should('have.css', 'background-color');
   });
 });

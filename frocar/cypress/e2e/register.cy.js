@@ -20,19 +20,25 @@ describe('RegisterPage', () => {
 
   it('Powinien wyświetlić błędy walidacji dla pustego formularza', () => {
     cy.get('button[type="submit"]').click();
-    cy.get('.text-danger').should('have.length.at.least', 1);
-    cy.get('.text-danger').eq(0).should('have.text', 'Nazwa użytkownika jest wymagana');
+    cy.get('.validation-error').should('have.length', 4); // 4 pola, wszystkie wymagane
+    cy.get('.validation-error').eq(0).should('have.text', 'Nazwa użytkownika jest wymagana');
+    cy.get('.validation-error').eq(1).should('have.text', 'Email jest wymagany');
+    cy.get('.validation-error').eq(2).should('have.text', 'Hasło jest wymagane');
+    cy.get('.validation-error').eq(3).should('have.text', 'Potwierdzenie hasła jest wymagane');
   });
 
   it('Powinien wyświetlić błędy walidacji dla niepoprawnych danych', () => {
-    cy.get('input[name="username"]').type('ab');
-    cy.get('input[name="email"]').type('invalid');
-    cy.get('input[name="password"]').type('pass');
-    cy.get('input[name="confirmPassword"]').type('different');
-    cy.get('button[type="submit"]').click();
-    cy.get('.text-danger').should('have.length.at.least', 1);
-    cy.get('.text-danger').eq(0).should('have.text', 'Nazwa użytkownika musi mieć co najmniej 3 znaki');
-  });
+  cy.get('input[name="username"]').type('ab');
+  cy.get('input[name="email"]').type('invalid');
+  cy.get('input[name="password"]').type('pass');
+  cy.get('input[name="confirmPassword"]').type('different');
+  cy.get('button[type="submit"]').click();
+  cy.get('.validation-error').should('have.length', 4); // 4 pola z błędami
+  cy.get('.validation-error').eq(0).should('have.text', 'Nazwa użytkownika musi mieć co najmniej 3 znaki');
+  cy.get('.validation-error').eq(1).should('have.text', "Uwzględnij znak '@' w adresie e-mail");
+  cy.get('.validation-error').eq(2).should('have.text', 'Hasło musi zawierać co najmniej jeden znak specjalny'); // Updated to match the actual error
+  cy.get('.validation-error').eq(3).should('have.text', 'Hasła muszą być identyczne');
+});
 
   it('Powinien zarejestrować użytkownika przy poprawnych danych i przekierować do logowania', () => {
     cy.intercept('POST', 'https://localhost:5001/api/account/register', {

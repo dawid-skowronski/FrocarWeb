@@ -95,7 +95,7 @@ const RentalDetailsPage = () => {
         rentalStatus: data.rentalStatus,
       };
 
-      if (mappedRental.rentalStatus === "Ended") {
+      if (mappedRental.rentalStatus === "Zakończone") {
         const reviewResponse = await fetch(
           `https://localhost:5001/api/CarRental/reviews/${data.carListing.id}`,
           {
@@ -403,7 +403,7 @@ const RentalDetailsPage = () => {
           </div>
         </motion.div>
 
-        {rental.rentalStatus === "Ended" && !reviewSuccess && (
+        {rental.rentalStatus === "Zakończone" && !reviewSuccess && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -469,7 +469,7 @@ const RentalDetailsPage = () => {
           <div className="alert alert-success text-center mb-3">{reviewSuccess}</div>
         )}
 
-        {rental.rentalStatus !== "Ended" && (
+        {rental.rentalStatus !== "Zakończone" && (
           <motion.button
             onClick={handleCancelRental}
             className="btn btn-danger w-100 rounded-pill text-white"

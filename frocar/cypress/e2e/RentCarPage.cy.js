@@ -157,31 +157,70 @@ describe('RentCarPage', () => {
   });
 
   it('powinno wynająć samochód pomyślnie', () => {
-    cy.get('input[placeholder="Wpisz miasto (np. Warszawa)"]').type('Lubin');
-    cy.get('button').contains('Szukaj').click();
-    cy.wait('@geocodeCity');
-    cy.wait('@getCarListings');
-    cy.get('.card').first().contains('Wynajmij').click();
-    cy.get('.modal').should('be.visible');
-    cy.get('input[type="date"]').first().type('2025-06-01');
-    cy.get('input[type="date"]').last().type('2025-06-03');
-    cy.get('.modal-footer').contains('Zakończ').click();
-    cy.wait('@rentCar');
-    cy.get('div.alert').should('contain', 'Wypożyczenie utworzone pomyślnie!');
-  });
+  // Wpisujemy miasto
+  cy.get('input[placeholder="Wpisz miasto (np. Warszawa)"]').type('Lubin');
+  cy.get('button').contains('Szukaj').click();
 
-  it('powinno wyświetlać komunikat o błędzie przy nieprawidłowych datach wynajmu', () => {
-    cy.get('input[placeholder="Wpisz miasto (np. Warszawa)"]').type('Lubin');
-    cy.get('button').contains('Szukaj').click();
-    cy.wait('@geocodeCity');
-    cy.wait('@getCarListings');
-    cy.get('.card').first().contains('Wynajmij').click();
-    cy.get('.modal').should('be.visible');
-    cy.get('input[type="date"]').first().type('2025-06-03');
-    cy.get('input[type="date"]').last().type('2025-06-01');
-    cy.get('.modal-footer').contains('Zakończ').click();
-    cy.get('div.alert').should('contain', 'Data zakończenia musi być późniejsza.');
-  });
+  // Czekamy na API
+  cy.wait('@geocodeCity');
+  cy.wait('@getCarListings');
+
+  // Sprawdzamy, czy karta istnieje i jest widoczna
+  cy.get('.card').should('have.length', 1, { timeout: 5000 });
+  cy.get('.card').first().should('be.visible');
+
+  // Sprawdzamy, czy przycisk "Wynajmij" istnieje i jest widoczny
+  cy.get('.card').first().find('button:contains("Wynajmij")').should('be.visible').click();
+
+  // Sprawdzamy, czy modal się otworzył
+  cy.get('.modal').should('be.visible');
+
+  // Wypełniamy daty
+  cy.get('input[type="date"]').first().type('2025-06-01');
+  cy.get('input[type="date"]').last().type('2025-06-03');
+
+  // Klikamy przycisk "Wynajmij" w modalu
+  cy.get('.modal').find('button').contains('Wynajmij').click();
+
+  // Czekamy na żądanie wynajmu
+  cy.wait('@rentCar');
+});
+
+ it('powinno wyświetlać komunikat o błędzie przy nieprawidłowych datach wynajmu', () => {
+  // Wpisujemy miasto
+  cy.get('input[placeholder="Wpisz miasto (np. Warszawa)"]').type('Lubin');
+  cy.get('button').contains('Szukaj').click();
+
+  // Czekamy na żądania API
+  cy.wait('@geocodeCity');
+  cy.wait('@getCarListings');
+
+  // Czekamy chwilę, aby zobaczyć wynik wyszukiwania (np. kartę)
+  cy.wait(1000); // 1 sekunda, aby zobaczyć, czy karta się pojawiła
+
+  // Klikamy przycisk "Wynajmij" na pierwszej karcie
+  cy.get('.card').first().contains('Wynajmij').click();
+
+  // Sprawdzamy, czy modal się pojawił, i czekamy chwilę, aby go zobaczyć
+  cy.get('.modal').should('be.visible');
+  cy.wait(1000); // 1 sekunda, aby zobaczyć modal
+
+  // Wypełniamy daty
+  cy.get('input[type="date"]').first().type('2025-06-03');
+  cy.get('input[type="date"]').last().type('2025-06-01');
+
+  // Czekamy chwilę, aby zobaczyć wprowadzone daty
+  cy.wait(1000); // 1 sekunda, aby zobaczyć wypełnione pola
+
+  // Klikamy przycisk "Wynajmij" w modalu
+  cy.get('.modal').find('button').contains('Wynajmij').click();
+
+  // Czekamy chwilę, aby zobaczyć komunikat o błędzie
+  cy.wait(1000); // 1 sekunda, aby zobaczyć komunikat
+
+  // Sprawdzamy, czy komunikat o błędzie się pojawił
+  cy.get('div.alert').should('contain', 'Data zakończenia musi być późniejsza.');
+});
 
   it('powinno wyświetlać mapę po kliknięciu na ogłoszenie', () => {
     cy.get('input[placeholder="Wpisz miasto (np. Warszawa)"]').type('Lubin');

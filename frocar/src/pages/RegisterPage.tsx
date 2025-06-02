@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as yup from "yup";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { useThemeStyles } from "../styles/useThemeStyles";
 
+// Validation schema with custom test for @ symbol
 const schema = yup.object().shape({
   username: yup.string().min(3, "Nazwa użytkownika musi mieć co najmniej 3 znaki").required("Nazwa użytkownika jest wymagana"),
-  email: yup.string().email("Podaj poprawny adres email").required("Email jest wymagany"),
+  email: yup
+    .string()
+    .email("Podaj poprawny adres email")
+    .test("has-at-symbol", "Uwzględnij znak '@' w adresie e-mail", (value) => {
+      return typeof value === "string" && value.includes("@");
+    })
+    .required("Email jest wymagany"),
   password: yup
     .string()
     .min(8, "Hasło musi mieć co najmniej 8 znaków")
@@ -24,7 +32,14 @@ const RegisterPage = () => {
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { theme, backgroundColor, cardBackgroundColor, textColor, buttonColor, errorColor, inputBackgroundColor, borderColor, buttonBackgroundColor, buttonBorderColor } = useThemeStyles();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -39,7 +54,7 @@ const RegisterPage = () => {
       setLoading(true);
       const response = await fetch("https://localhost:5001/api/account/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify(formData),
       });
       const data = await response.json();
@@ -50,7 +65,7 @@ const RegisterPage = () => {
         setServerError(errorMessage);
         return;
       }
-      navigate("/Login");
+      navigate("/login");
     } catch (err: any) {
       if (err.inner) {
         const newErrors: { [key: string]: string } = {};
@@ -78,8 +93,15 @@ const RegisterPage = () => {
         style={{ width: "400px", backgroundColor: cardBackgroundColor, color: textColor }}
       >
         <h2 className="text-center mb-4" style={{ color: textColor }}>Rejestracja</h2>
-        {serverError && <div className={`alert ${errorColor}`}>{serverError}</div>}
-        <form onSubmit={handleSubmit}>
+        {serverError && (
+          <div
+            className={`alert rounded-pill text-center`}
+            style={{ backgroundColor: errorColor, color: textColor, fontSize: "0.9rem" }}
+          >
+            {serverError}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} noValidate>
           <div className="mb-3">
             <label className="form-label" style={{ color: textColor }}>Nazwa użytkownika</label>
             <input
@@ -91,7 +113,11 @@ const RegisterPage = () => {
               value={formData.username}
               onChange={handleChange}
             />
-            {errors.username && <div className="text-danger mt-1">{errors.username}</div>}
+            {errors.username && (
+              <div className="validation-error" style={{ color: errorColor, fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                {errors.username}
+              </div>
+            )}
           </div>
           <div className="mb-3">
             <label className="form-label" style={{ color: textColor }}>Email</label>
@@ -104,7 +130,11 @@ const RegisterPage = () => {
               value={formData.email}
               onChange={handleChange}
             />
-            {errors.email && <div className="text-danger mt-1">{errors.email}</div>}
+            {errors.email && (
+              <div className="validation-error" style={{ color: errorColor, fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                {errors.email}
+              </div>
+            )}
           </div>
           <div className="mb-3">
             <label className="form-label" style={{ color: textColor }}>Hasło</label>
@@ -117,7 +147,11 @@ const RegisterPage = () => {
               value={formData.password}
               onChange={handleChange}
             />
-            {errors.password && <div className="text-danger mt-1">{errors.password}</div>}
+            {errors.password && (
+              <div className="validation-error" style={{ color: errorColor, fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                {errors.password}
+              </div>
+            )}
           </div>
           <div className="mb-3">
             <label className="form-label" style={{ color: textColor }}>Potwierdź hasło</label>
@@ -130,7 +164,11 @@ const RegisterPage = () => {
               value={formData.confirmPassword}
               onChange={handleChange}
             />
-            {errors.confirmPassword && <div className="text-danger mt-1">{errors.confirmPassword}</div>}
+            {errors.confirmPassword && (
+              <div className="validation-error" style={{ color: errorColor, fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                {errors.confirmPassword}
+              </div>
+            )}
           </div>
           <motion.button
             type="submit"

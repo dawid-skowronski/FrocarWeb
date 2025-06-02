@@ -1,6 +1,7 @@
 const { defineConfig } = require("cypress");
 
 module.exports = defineConfig({
+  projectId: 'k5rf1d',
   e2e: {
     baseUrl: "http://localhost:5173", // lub inny port gdzie działa twój frontend
     setupNodeEvents(on, config) {
