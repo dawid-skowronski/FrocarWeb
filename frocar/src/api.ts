@@ -1,4 +1,4 @@
-const API_URL = "https://localhost:5001"; // Twój backend
+const API_URL = "https://localhost:5001/"; // Twój backend
 
 export const fetchUsers = async () => {
     try {

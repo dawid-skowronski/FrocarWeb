@@ -8,23 +8,14 @@ import { useThemeStyles } from "../styles/useThemeStyles";
 import { jwtDecode } from "jwt-decode";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
-
-interface CarListing {
-  id: number;
-  brand: string;
-  engineCapacity: number;
-  fuelType: string;
-  seats: number;
-  carType: string;
-  rentalPricePerDay: number;
-  isAvailable: boolean;
-  userId: number;
-  features: string[];
-  latitude: number;
-  longitude: number;
-  isApproved: boolean;
-  averageRating?: number; // Dodajemy opcjonalne pole dla średniej oceny
-}
+import { applyFilters, FilterRule } from "../utils/carFilterContext";
+import {
+  filterByBrand,
+  filterByFuelType,
+  filterByMinSeats,
+  filterByPriceRange,
+} from "../utils/filterStrategies";
+import { CarListing } from "../pages/Profile"; 
 
 interface CarRentalRequest {
   carListingId: number;
@@ -38,7 +29,7 @@ interface Review {
   userId: number;
   rating: number;
   comment: string;
-  user?: { id: number; userName: string }; // Przykładowa struktura użytkownika
+  user?: { id: number; userName: string };
   carRental?: { carListingId: number };
 }
 
@@ -49,7 +40,7 @@ interface DecodedToken {
 const containerStyle = { width: "100%", height: "400px" };
 
 const debounce = (func: (...args: any[]) => void, delay: number) => {
-  let timeoutId: NodeJS.Timeout; 
+  let timeoutId: NodeJS.Timeout;
   return (...args: any[]) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func(...args), delay);
@@ -79,9 +70,9 @@ const RentCarPage = () => {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [filterBrand, setFilterBrand] = useState<string>("");
   const [filterFuelType, setFilterFuelType] = useState<string>("all");
-  const [filterPriceMin, setFilterPriceMin] = useState<string>("");
-  const [filterPriceMax, setFilterPriceMax] = useState<string>("");
-  const [filterSeatsMin, setFilterSeatsMin] = useState<string>("");
+  const [filterPriceMin, setFilterPriceMin] = useState<number | "">("");
+  const [filterPriceMax, setFilterPriceMax] = useState<number | "">("");
+  const [filterSeatsMin, setFilterSeatsMin] = useState<number | "">("");
 
   const {
     theme,
@@ -302,34 +293,42 @@ const RentCarPage = () => {
   };
 
   useEffect(() => {
-    let filtered = listings;
+    if (
+      filterPriceMin !== "" &&
+      filterPriceMax !== "" &&
+      Number(filterPriceMin) > Number(filterPriceMax)
+    ) {
+      setMessage("Cena minimalna nie może być większa niż maksymalna.");
+      setFilteredListings([]);
+      return;
+    }
+
+    const filters: FilterRule[] = [];
 
     if (filterBrand) {
-      filtered = filtered.filter((listing) =>
-        listing.brand.toLowerCase().includes(filterBrand.toLowerCase())
-      );
+      filters.push({ strategy: filterByBrand, value: filterBrand });
     }
-
     if (filterFuelType !== "all") {
-      filtered = filtered.filter((listing) => listing.fuelType === filterFuelType);
+      filters.push({ strategy: filterByFuelType, value: filterFuelType });
+    }
+    if (filterSeatsMin !== "" && !isNaN(Number(filterSeatsMin))) {
+      filters.push({ strategy: filterByMinSeats, value: Number(filterSeatsMin) });
+    }
+    if (filterPriceMin !== "" || filterPriceMax !== "") {
+      filters.push({
+        strategy: filterByPriceRange,
+        value: {
+          min: filterPriceMin !== "" ? Number(filterPriceMin) : 0,
+          max: filterPriceMax !== "" ? Number(filterPriceMax) : Infinity,
+        },
+      });
     }
 
-    const priceMin = filterPriceMin ? parseFloat(filterPriceMin) : 0;
-    const priceMax = filterPriceMax ? parseFloat(filterPriceMax) : Infinity;
-    if (filterPriceMin || filterPriceMax) {
-      filtered = filtered.filter(
-        (listing) =>
-          listing.rentalPricePerDay >= priceMin && listing.rentalPricePerDay <= priceMax
-      );
-    }
-
-    const seatsMin = filterSeatsMin ? parseInt(filterSeatsMin) : 0;
-    if (filterSeatsMin) {
-      filtered = filtered.filter((listing) => listing.seats >= seatsMin);
-    }
-
-    setFilteredListings(filtered);
-    setMessage(filtered.length === 0 ? "Brak samochodów pasujących do filtrów." : "");
+    const currentFilteredListings = applyFilters(listings, filters);
+    setFilteredListings(currentFilteredListings);
+    setMessage(
+      currentFilteredListings.length === 0 ? "Brak samochodów pasujących do filtrów." : ""
+    );
   }, [filterBrand, filterFuelType, filterPriceMin, filterPriceMax, filterSeatsMin, listings]);
 
   useEffect(() => {
@@ -424,7 +423,7 @@ const RentCarPage = () => {
                 type="number"
                 className="form-control"
                 value={filterPriceMin}
-                onChange={(e) => setFilterPriceMin(e.target.value)}
+                onChange={(e) => setFilterPriceMin(parseFloat(e.target.value) || "")}
                 placeholder="Min"
                 style={{ backgroundColor: cardBackgroundColor, color: textColor }}
               />
@@ -437,7 +436,7 @@ const RentCarPage = () => {
                 type="number"
                 className="form-control"
                 value={filterPriceMax}
-                onChange={(e) => setFilterPriceMax(e.target.value)}
+                onChange={(e) => setFilterPriceMax(parseFloat(e.target.value) || "")}
                 placeholder="Max"
                 style={{ backgroundColor: cardBackgroundColor, color: textColor }}
               />
@@ -450,7 +449,7 @@ const RentCarPage = () => {
                 type="number"
                 className="form-control"
                 value={filterSeatsMin}
-                onChange={(e) => setFilterSeatsMin(e.target.value)}
+                onChange={(e) => setFilterSeatsMin(parseInt(e.target.value) || "")}
                 placeholder="Min"
                 style={{ backgroundColor: cardBackgroundColor, color: textColor }}
               />
@@ -538,6 +537,74 @@ const RentCarPage = () => {
             ))}
           </div>
         )}
+        {selectedListing && (
+          <Modal
+            show={showRentalModal}
+            onHide={() => setShowRentalModal(false)}
+            dialogClassName={`theme-${theme}`}
+          >
+            <Modal.Header
+              closeButton
+              style={{ backgroundColor: cardBackgroundColor, color: textColor }}
+            >
+              <Modal.Title>Wynajmij {selectedListing.brand}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body style={{ backgroundColor: cardBackgroundColor }}>
+              <div className="mb-3">
+                <label className="form-label" style={{ color: textColor }}>
+                  Data rozpoczęcia
+                </label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={rentalData.rentalStartDate}
+                  onChange={(e) =>
+                    setRentalData({ ...rentalData, rentalStartDate: e.target.value })
+                  }
+                  style={{ backgroundColor: cardBackgroundColor, color: textColor }}
+                />
+              </div>
+              <div className="mb-3">
+                <label className="form-label" style={{ color: textColor }}>
+                  Data zakończenia
+                </label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={rentalData.rentalEndDate}
+                  onChange={(e) =>
+                    setRentalData({ ...rentalData, rentalEndDate: e.target.value })
+                  }
+                  style={{ backgroundColor: cardBackgroundColor, color: textColor }}
+                />
+              </div>
+            </Modal.Body>
+            <Modal.Footer style={{ backgroundColor: cardBackgroundColor }}>
+              <Button
+                variant="secondary"
+                onClick={() => setShowRentalModal(false)}
+                style={{
+                  backgroundColor: buttonBackgroundColor,
+                  color: textColor,
+                  border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                }}
+              >
+                Anuluj
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleRent}
+                style={{
+                  backgroundColor: buttonBackgroundColor,
+                  color: textColor,
+                  border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                }}
+              >
+                Wynajmij
+              </Button>
+            </Modal.Footer>
+          </Modal>
+        )}
         {selectedMapListing && (
           <Modal
             show={showMapModal}
@@ -577,7 +644,11 @@ const RentCarPage = () => {
               <Button
                 variant="secondary"
                 onClick={() => setShowMapModal(false)}
-                style={{ backgroundColor: buttonBackgroundColor, color: textColor }}
+                style={{
+                  backgroundColor: buttonBackgroundColor,
+                  color: textColor,
+                  border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                }}
               >
                 Zamknij
               </Button>
@@ -616,62 +687,13 @@ const RentCarPage = () => {
               <Button
                 variant="secondary"
                 onClick={() => setShowReviewsModal(false)}
-                style={{ backgroundColor: buttonBackgroundColor, color: textColor }}
+                style={{
+                  backgroundColor: buttonBackgroundColor,
+                  color: textColor,
+                  border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+                }}
               >
                 Zamknij
-              </Button>
-            </Modal.Footer>
-          </Modal>
-        )}
-        {selectedListing && (
-          <Modal
-            show={showRentalModal}
-            onHide={() => setShowRentalModal(false)}
-            dialogClassName={`theme-${theme}`}
-          >
-            <Modal.Header
-              closeButton
-              style={{ backgroundColor: cardBackgroundColor, color: textColor }}
-            >
-              <Modal.Title>Wynajmij {selectedListing.brand}</Modal.Title>
-            </Modal.Header>
-            <Modal.Body style={{ backgroundColor: cardBackgroundColor }}>
-              <div className="mb-3">
-                <label className="form-label" style={{ color: textColor }}>
-                  Data rozpoczęcia
-                </label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={rentalData.rentalStartDate}
-                  onChange={(e) =>
-                    setRentalData({ ...rentalData, rentalStartDate: e.target.value })
-                  }
-                />
-              </div>
-              <div className="mb-3">
-                <label className="form-label" style={{ color: textColor }}>
-                  Data zakończenia
-                </label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={rentalData.rentalEndDate}
-                  onChange={(e) =>
-                    setRentalData({ ...rentalData, rentalEndDate: e.target.value })
-                  }
-                />
-              </div>
-            </Modal.Body>
-            <Modal.Footer style={{ backgroundColor: cardBackgroundColor }}>
-              <Button
-                variant="secondary"
-                onClick={() => setShowRentalModal(false)}
-              >
-                Anuluj
-              </Button>
-              <Button variant="primary" onClick={handleRent}>
-                Wynajmij
               </Button>
             </Modal.Footer>
           </Modal>

@@ -53,7 +53,7 @@ describe('RegisterPage', () => {
     cy.get('button[type="submit"]').click();
 
     cy.wait('@register');
-    cy.url().should('include', '/Login');
+    cy.url().should('include', '/login');
   });
 
   it('Powinien wyświetlić błąd serwera dla zajętej nazwy użytkownika', () => {

@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import Cookies from "js-cookie";
 
-// Importujemy nasze strategie filtrowania i funkcję kontekstu
+
 import { filterByBrand, filterByAvailability, filterByFuelType, filterByMinSeats, filterByMaxPrice } from '../utils/filterStrategies';
 import { applyFilters, FilterRule } from '../utils/carFilterContext';
 
@@ -18,7 +18,7 @@ const containerStyle = {
   height: "500px",
 };
 
-// WAŻNE: Dodaj 'export' przed interfejsem CarListing
+
 export interface CarListing {
   id: number;
   brand: string;
@@ -33,6 +33,7 @@ export interface CarListing {
   rentalPricePerDay: number;
   isAvailable?: boolean;
   isApproved: boolean;
+  averageRating?: number; 
 }
 
 const ProfilePage = () => {
@@ -51,7 +52,7 @@ const ProfilePage = () => {
   const [newUsername, setNewUsername] = useState<string>("");
   const [username, setUsername] = useState<string>("");
 
-  // Stany dla filtrów
+  
   const [filterBrand, setFilterBrand] = useState<string>("");
   const [filterAvailability, setFilterAvailability] = useState<"all" | "available" | "unavailable">("all");
   const [filterFuelType, setFilterFuelType] = useState<string>("");
@@ -73,7 +74,7 @@ const ProfilePage = () => {
   } = useThemeStyles();
 
   const navigate = useNavigate();
-  const googleMapsApiKey = import.meta.env.VITE_Maps_API_KEY;
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
   const getUsernameFromToken = () => {
     const token = Cookies.get("token");
@@ -140,7 +141,7 @@ const ProfilePage = () => {
       const data: CarListing[] = await response.json();
       const approvedListings = data.filter(car => car.isApproved);
       setCarListings(approvedListings);
-      setFilteredListings(approvedListings); // Początkowo filteredListings są takie same jak carListings
+      setFilteredListings(approvedListings); 
 
       const addressPromises = approvedListings.map((car) =>
         reverseGeocode(car.latitude, car.longitude).then((address) => ({
@@ -243,7 +244,7 @@ const ProfilePage = () => {
         throw new Error("Nie udało się usunąć samochodu.");
       }
 
-      // Aktualizuj obie listy po usunięciu
+      
       setCarListings(prev => prev.filter((car) => car.id !== listingToDelete));
       setFilteredListings(prev => prev.filter((car) => car.id !== listingToDelete));
       setMessage("Samochód został usunięty pomyślnie.");
@@ -282,7 +283,7 @@ const ProfilePage = () => {
         throw new Error("Nie udało się zaktualizować dostępności.");
       }
 
-      // Aktualizuj obie listy po zmianie dostępności
+      
       setCarListings((prevListings) =>
         prevListings.map((car) =>
           car.id === id ? { ...car, isAvailable: newAvailability } : car
@@ -331,7 +332,7 @@ const ProfilePage = () => {
       setAddresses((prev) => ({ ...prev, [selectedListing.id]: updatedAddress }));
       setMessage("Ogłoszenie zaktualizowane pomyślnie!");
       setShowEditModal(false);
-      // Ponowne pobranie, aby upewnić się, że dane są świeże, lub ręczna aktualizacja stanu
+      
       fetchUserCarListings(); 
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -383,7 +384,7 @@ const ProfilePage = () => {
     }
   };
 
-  // Zaktualizowany useEffect do filtrowania
+  
   useEffect(() => {
     const filters: FilterRule[] = [];
 
@@ -396,16 +397,16 @@ const ProfilePage = () => {
     if (filterFuelType) {
         filters.push({ strategy: filterByFuelType, value: filterFuelType });
     }
-    // Dodaj warunek, aby upewnić się, że wartość nie jest pustym stringiem
+    
     if (filterMinSeats !== '' && !isNaN(filterMinSeats)) {
         filters.push({ strategy: filterByMinSeats, value: filterMinSeats });
     }
-    // Dodaj warunek, aby upewnić się, że wartość nie jest pustym stringiem
+    
     if (filterMaxPrice !== '' && !isNaN(filterMaxPrice)) {
         filters.push({ strategy: filterByMaxPrice, value: filterMaxPrice });
     }
 
-    // Używamy funkcji kontekstu do zastosowania wszystkich filtrów
+    
     const currentFilteredListings = applyFilters(carListings, filters);
     setFilteredListings(currentFilteredListings);
   }, [filterBrand, filterAvailability, filterFuelType, filterMinSeats, filterMaxPrice, carListings]);

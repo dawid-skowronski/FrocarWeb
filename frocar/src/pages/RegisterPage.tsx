@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as yup from "yup";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import { useThemeStyles } from "../styles/useThemeStyles";
 
-// Validation schema with custom test for @ symbol
+// Schemat walidacji z niestandardowym testem dla znaku @
 const schema = yup.object().shape({
   username: yup.string().min(3, "Nazwa użytkownika musi mieć co najmniej 3 znaki").required("Nazwa użytkownika jest wymagana"),
   email: yup
@@ -32,14 +31,7 @@ const RegisterPage = () => {
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
   const { theme, backgroundColor, cardBackgroundColor, textColor, buttonColor, errorColor, inputBackgroundColor, borderColor, buttonBackgroundColor, buttonBorderColor } = useThemeStyles();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/");
-    }
-  }, [isAuthenticated, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -65,7 +57,7 @@ const RegisterPage = () => {
         setServerError(errorMessage);
         return;
       }
-      navigate("/login");
+      navigate("/Login");
     } catch (err: any) {
       if (err.inner) {
         const newErrors: { [key: string]: string } = {};
