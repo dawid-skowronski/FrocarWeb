@@ -1,15 +1,15 @@
-const API_URL = "https://localhost:5001/"; // Twój backend
+const API_URL = "https://localhost:5001/"; 
 
 export const fetchUsers = async () => {
     try {
-        const token = localStorage.getItem("token"); // Pobierz token JWT z localStorage
+        const token = localStorage.getItem("token"); 
         if (!token) throw new Error("Brak tokena autoryzacji");
 
         const response = await fetch(`${API_URL}/api/Account`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}` // Dodaj token do nagłówka
+                "Authorization": `Bearer ${token}` 
             },
         });
 

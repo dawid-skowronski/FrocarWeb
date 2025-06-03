@@ -32,7 +32,7 @@ describe('LoginPage', () => {
 
   it('powinien wyświetlać błąd przy pustym formularzu', () => {
     cy.get('button[type="submit"]').click();
-    cy.get('.alert').should('contain', 'Nazwa użytkownika i hasło są wymagane.');
+    cy.get('.alert').should('contain', 'Proszę podać nazwę użytkownika i hasło.');
   });
 
   it('powinien wyświetlać błąd przy niepoprawnych danych', () => {
@@ -59,7 +59,7 @@ describe('LoginPage', () => {
     cy.get('button[type="submit"]').click();
 
     cy.wait('@loginRequest');
-    cy.get('.alert').should('contain', 'Konto jest zablokowane');
+    cy.get('.alert').should('contain', 'Brak uprawnień do zalogowania.');
   });
 
   it('powinien przekierować do strony resetu hasła', () => {

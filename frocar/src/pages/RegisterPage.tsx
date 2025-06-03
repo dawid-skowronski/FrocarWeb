@@ -5,7 +5,7 @@ import * as yup from "yup";
 import { useNavigate } from "react-router-dom";
 import { useThemeStyles } from "../styles/useThemeStyles";
 
-// Schemat walidacji z niestandardowym testem dla znaku @
+
 const schema = yup.object().shape({
   username: yup.string().min(3, "Nazwa użytkownika musi mieć co najmniej 3 znaki").required("Nazwa użytkownika jest wymagana"),
   email: yup
@@ -30,6 +30,7 @@ const RegisterPage = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
   const navigate = useNavigate();
   const { theme, backgroundColor, cardBackgroundColor, textColor, buttonColor, errorColor, inputBackgroundColor, borderColor, buttonBackgroundColor, buttonBorderColor } = useThemeStyles();
 
@@ -73,6 +74,10 @@ const RegisterPage = () => {
     backgroundColor: inputBackgroundColor,
     color: textColor,
     borderColor,
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPasswords(!showPasswords);
   };
 
   return (
@@ -131,7 +136,7 @@ const RegisterPage = () => {
           <div className="mb-3">
             <label className="form-label" style={{ color: textColor }}>Hasło</label>
             <input
-              type="password"
+              type={showPasswords ? "text" : "password"}
               name="password"
               className={`form-control rounded-pill ${errors.password ? "is-invalid" : ""}`}
               style={inputStyle}
@@ -148,7 +153,7 @@ const RegisterPage = () => {
           <div className="mb-3">
             <label className="form-label" style={{ color: textColor }}>Potwierdź hasło</label>
             <input
-              type="password"
+              type={showPasswords ? "text" : "password"}
               name="confirmPassword"
               className={`form-control rounded-pill ${errors.confirmPassword ? "is-invalid" : ""}`}
               style={inputStyle}
@@ -161,6 +166,18 @@ const RegisterPage = () => {
                 {errors.confirmPassword}
               </div>
             )}
+          </div>
+          <div className="mb-3 form-check">
+            <input
+              type="checkbox"
+              className="form-check-input"
+              id="showPasswords"
+              checked={showPasswords}
+              onChange={togglePasswordVisibility}
+            />
+            <label className="form-check-label" htmlFor="showPasswords" style={{ color: textColor }}>
+              Pokaż hasła
+            </label>
           </div>
           <motion.button
             type="submit"

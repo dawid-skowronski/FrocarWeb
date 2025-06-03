@@ -1,13 +1,10 @@
 describe('AddCarPage', () => {
-  // Obsługa nieoczekiwanych wyjątków
   Cypress.on('uncaught:exception', (err, runnable) => {
     console.error('Nieoczekiwany wyjątek:', err.message);
     return false;
   });
 
-  // Ulepszona funkcja pomocnicza do logowania i przejścia na AddCarPage
   const loginAndVisitAddCarPage = () => {
-    // 1. Najpierw spróbuj zalogować przez API
     cy.request({
       method: 'POST',
       url: 'https://localhost:5001/api/Account/login',
@@ -17,7 +14,6 @@ describe('AddCarPage', () => {
       },
       failOnStatusCode: false
     }).then((loginResponse) => {
-      // Jeśli logowanie nie powiodło się, zarejestruj użytkownika
       if (loginResponse.status !== 200) {
         cy.request({
           method: 'POST',
@@ -31,24 +27,19 @@ describe('AddCarPage', () => {
         });
       }
     });
-
-    // 2. Logowanie przez UI
     cy.visit('/login');
     
-    // Debugowanie - sprawdź czy pola istnieją
     cy.get('input[name="username"]').should('exist').type('Kozub', { delay: 50 });
     cy.get('input[name="password"]').should('exist').type('Qwerty123!', { delay: 50 });
-    
-    // Zrzut ekranu przed wysłaniem formularza
+
     cy.screenshot('before-login-submit');
     
     cy.get('button[type="submit"]').should('be.visible').click();
 
-    // 3. Sprawdź czy logowanie się powiodło
+
     cy.url().should('not.include', '/login', { timeout: 15000 });
     cy.getCookie('token').should('exist');
 
-    // Mock endpointów autoryzacyjnych
     cy.intercept('GET', 'https://localhost:5001/api/CarRental/user', {
       statusCode: 200,
       body: { userId: '123', username: 'Kozub', email: 'kozub@example.com' },
@@ -59,7 +50,6 @@ describe('AddCarPage', () => {
       body: { notifications: [] },
     }).as('getNotifications');
 
-    // Mock API Google Maps
     cy.intercept('GET', 'https://maps.googleapis.com/maps/api/geocode/json?address=*', {
       statusCode: 200,
       body: {
@@ -79,15 +69,13 @@ describe('AddCarPage', () => {
       },
     }).as('reverseGeocode');
 
-    // Przejście na AddCarPage
     cy.visit('/add-car');
     cy.get('h1').should('contain', 'Dodaj Samochód', { timeout: 15000 });
     cy.get('form').should('be.visible');
   };
 
-  // Ulepszona funkcja pomocnicza do logowania (używana w teście wylogowania)
   const loginUser = () => {
-    // Analogiczna poprawka jak w loginAndVisitAddCarPage
+
     cy.request({
       method: 'POST',
       url: 'https://localhost:5001/api/Account/login',
@@ -130,7 +118,7 @@ describe('AddCarPage', () => {
     }).as('getNotifications');
   };
 
-  // Zachowujemy wszystkie oryginalne testy bez zmian
+  
   it('powinno poprawnie renderować formularz dodawania samochodu', () => {
     loginAndVisitAddCarPage();
 
@@ -243,7 +231,7 @@ describe('AddCarPage', () => {
     cy.get('.modal-footer').find('button').contains('Zamknij').click();
 
     cy.get('button[type="submit"]').click();
-    cy.get('div.alert', { timeout: 10000 }).should('contain', 'Samochód dodany pomyślnie! Przekierowanie na strone głowna');
+    cy.get('div.alert', { timeout: 10000 }).should('contain', 'Samochód dodany pomyślnie! Przekierowanie na stronę główną...');
 
     cy.wait('@createCar', { timeout: 10000 }).its('request.body').should('deep.equal', {
       brand: 'Toyota',

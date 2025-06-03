@@ -7,18 +7,20 @@ export const useThemeStyles = (): ThemeStyles => {
   const backgroundColor = theme === "dark" ? "#1a1a1a" : "#f8f9fa";
   const cardBackgroundColor = theme === "dark" ? "#2d2d2d" : "#ffffff";
   const cardHoverBackgroundColor = theme === "dark" ? "#444" : "rgba(240, 240, 240, 0.9)";
-  const textColor = theme === "dark" ? "#ffffff" : "#218838";
+  const textColor = theme === "dark" ? "#ffffff" : "#218838"; 
   const borderColor = theme === "dark" ? "#444" : "#e0e0e0";
   const inputBackgroundColor = theme === "dark" ? "#3d3d3d" : "#f1f1f1";
-  const buttonColor = theme === "dark" ? "btn-outline-light" : "btn-success";
+  const buttonColor = theme === "dark" ? "btn-outline-light" : "btn-success"; 
   const errorColor = theme === "dark" ? "alert-dark" : "alert-danger";
   const switchColor = theme === "dark" ? "#666" : "#ced4da";
-  const buttonBackgroundColor = theme === "dark" ? "#555555" : undefined;
-  const buttonBorderColor = theme === "dark" ? "#666666" : undefined;
+  
+ 
+  const buttonBackgroundColor = theme === "dark" ? "#555555" : "#0056b3"; 
+  const buttonBorderColor = theme === "dark" ? "#666666" : "#003d80"; 
 
   const cardStyle: CSSProperties = {
     border: `1px solid ${borderColor}`,
-    color: textColor,
+    color: textColor, 
     width: "600px",
     maxWidth: "100%",
     display: "flex",
@@ -34,7 +36,7 @@ export const useThemeStyles = (): ThemeStyles => {
 
   const profileCardStyle: CSSProperties = {
     border: `1px solid ${borderColor}`,
-    color: textColor,
+    color: textColor, 
     width: "90%",
     maxWidth: "1200px",
     display: "flex",
@@ -53,14 +55,14 @@ export const useThemeStyles = (): ThemeStyles => {
     borderRadius: "12px",
     overflow: "hidden",
     boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-    borderCollapse: "separate",
+    borderCollapse: "separate", 
     backgroundColor: cardBackgroundColor,
     width: "100%",
   };
 
   const tableHeaderStyle: CSSProperties = {
-    color: "#ffffff",
-    backgroundColor: theme === "dark" ? "#3a3a3a" : "#28a745",
+    color: "#ffffff", 
+    backgroundColor: theme === "dark" ? "#3a3a3a" : "#28a745", 
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
@@ -73,11 +75,11 @@ export const useThemeStyles = (): ThemeStyles => {
     borderBottom: `1px solid ${borderColor}`,
     textAlign: "left",
     fontSize: "14px",
-    color: textColor,
+    color: textColor, 
   };
 
   const deleteButtonStyle: CSSProperties = {
-    backgroundColor: theme === "dark" ? "#bf2e3c" : "#bf2e3c",
+    backgroundColor: theme === "dark" ? "#bf2e3c" : "#bf2e3c", 
     border: "none",
     color: "white",
     padding: "8px 20px",
@@ -88,10 +90,10 @@ export const useThemeStyles = (): ThemeStyles => {
   };
 
   const alertStyle: CSSProperties = {
-    backgroundColor: theme === "dark" ? "#444" : "#d1e7dd",
+    backgroundColor: theme === "dark" ? "#444" : "#d1e7dd", 
     borderRadius: "10px",
     boxShadow: "0px 2px 5px rgba(0, 0, 0, 0.1)",
-    color: textColor,
+    color: textColor, 
     padding: "10px",
     marginBottom: "15px",
   };
@@ -104,7 +106,7 @@ export const useThemeStyles = (): ThemeStyles => {
     textColor,
     borderColor,
     inputBackgroundColor,
-    buttonColor,
+    buttonColor, 
     errorColor,
     switchColor,
     buttonBackgroundColor,
@@ -119,7 +121,6 @@ export const useThemeStyles = (): ThemeStyles => {
   };
 };
 
-// Typy dla zwracanych wartości
 interface ThemeStyles {
   theme: string;
   backgroundColor: string;
@@ -131,8 +132,8 @@ interface ThemeStyles {
   buttonColor: string;
   errorColor: string;
   switchColor: string;
-  buttonBackgroundColor?: string;
-  buttonBorderColor?: string;
+  buttonBackgroundColor?: string; 
+  buttonBorderColor?: string; 
   cardStyle: CSSProperties;
   profileCardStyle: CSSProperties;
   tableStyle: CSSProperties;

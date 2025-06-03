@@ -1,13 +1,10 @@
 describe('RentCarPage', () => {
-  // Obsługa nieoczekiwanych wyjątków
   Cypress.on('uncaught:exception', (err, runnable) => {
     console.error('Nieoczekiwany wyjątek:', err.message);
     return false;
   });
 
-  // Funkcja pomocnicza do logowania
   const loginUser = () => {
-    // Przechwytujemy żądanie logowania
     cy.intercept('POST', 'https://localhost:5001/api/Account/login', {
       statusCode: 200,
       body: {
@@ -15,7 +12,6 @@ describe('RentCarPage', () => {
       },
     }).as('loginRequest');
 
-    // Wykonujemy żądanie logowania
     cy.request({
       method: 'POST',
       url: 'https://localhost:5001/api/Account/login',
@@ -26,16 +22,13 @@ describe('RentCarPage', () => {
       failOnStatusCode: false,
     }).then((response) => {
       if (response.status === 200) {
-        // Ustawiamy token w ciasteczkach
         cy.setCookie('token', response.body.token);
         cy.setCookie('jwt', response.body.token);
       }
     });
   };
 
-  // Funkcja pomocnicza do ustawiania mocków API
   const setupMocks = () => {
-    // Mock geokodowania
     cy.intercept('GET', 'https://maps.googleapis.com/maps/api/geocode/json?address=*', {
       statusCode: 200,
       body: {
@@ -54,7 +47,6 @@ describe('RentCarPage', () => {
       },
     }).as('geocodeCity');
 
-    // Mock listy samochodów
     cy.intercept('GET', 'https://localhost:5001/api/CarListings/list?lat=*&lng=*&radius=50', {
       statusCode: 200,
       body: [
@@ -77,7 +69,6 @@ describe('RentCarPage', () => {
       ],
     }).as('getCarListings');
 
-    // Mock recenzji
     cy.intercept('GET', 'https://localhost:5001/api/CarRental/reviews/1', {
       statusCode: 200,
       body: [
@@ -92,7 +83,7 @@ describe('RentCarPage', () => {
       ],
     }).as('getReviews');
 
-    // Mock wynajmu samochodu
+
     cy.intercept('POST', 'https://localhost:5001/api/CarRental/create', {
       statusCode: 200,
       body: { message: 'Wypożyczenie utworzone pomyślnie!' },
@@ -130,19 +121,17 @@ describe('RentCarPage', () => {
     cy.wait('@geocodeCity');
     cy.wait('@getCarListings');
 
-    // Filtruj po marce
     cy.get('input[placeholder="Wpisz markę"]').type('Toyota');
     cy.get('.card').should('have.length', 1);
     cy.get('.card').contains('Toyota').should('be.visible');
     cy.get('input[placeholder="Wpisz markę"]').clear();
 
-    // Filtruj po typie paliwa
     cy.get('select').select('benzyna');
     cy.get('.card').should('have.length', 1);
     cy.get('.card').contains('benzyna').should('be.visible');
     cy.get('select').select('all');
 
-    // Filtruj po cenie
+
     cy.get('input[placeholder="Min"]').first().type('90');
     cy.get('.card').should('have.length', 1);
     cy.get('input[placeholder="Min"]').first().clear();
@@ -150,76 +139,66 @@ describe('RentCarPage', () => {
     cy.get('.card').should('have.length', 0);
     cy.get('input[placeholder="Max"]').clear();
 
-    // Filtruj po liczbie miejsc
     cy.get('input[placeholder="Min"]').last().type('5');
     cy.get('.card').should('have.length', 1);
     cy.get('input[placeholder="Min"]').last().clear();
   });
 
   it('powinno wynająć samochód pomyślnie', () => {
-  // Wpisujemy miasto
+ 
   cy.get('input[placeholder="Wpisz miasto (np. Warszawa)"]').type('Lubin');
   cy.get('button').contains('Szukaj').click();
 
-  // Czekamy na API
   cy.wait('@geocodeCity');
   cy.wait('@getCarListings');
 
-  // Sprawdzamy, czy karta istnieje i jest widoczna
+ 
   cy.get('.card').should('have.length', 1, { timeout: 5000 });
   cy.get('.card').first().should('be.visible');
 
-  // Sprawdzamy, czy przycisk "Wynajmij" istnieje i jest widoczny
+
   cy.get('.card').first().find('button:contains("Wynajmij")').should('be.visible').click();
 
-  // Sprawdzamy, czy modal się otworzył
+
   cy.get('.modal').should('be.visible');
 
-  // Wypełniamy daty
+
   cy.get('input[type="date"]').first().type('2025-06-01');
   cy.get('input[type="date"]').last().type('2025-06-03');
 
-  // Klikamy przycisk "Wynajmij" w modalu
+
   cy.get('.modal').find('button').contains('Wynajmij').click();
 
-  // Czekamy na żądanie wynajmu
+
   cy.wait('@rentCar');
 });
 
  it('powinno wyświetlać komunikat o błędzie przy nieprawidłowych datach wynajmu', () => {
-  // Wpisujemy miasto
+  
   cy.get('input[placeholder="Wpisz miasto (np. Warszawa)"]').type('Lubin');
   cy.get('button').contains('Szukaj').click();
 
-  // Czekamy na żądania API
+
   cy.wait('@geocodeCity');
   cy.wait('@getCarListings');
 
-  // Czekamy chwilę, aby zobaczyć wynik wyszukiwania (np. kartę)
-  cy.wait(1000); // 1 sekunda, aby zobaczyć, czy karta się pojawiła
-
-  // Klikamy przycisk "Wynajmij" na pierwszej karcie
+ 
+  cy.wait(1000); 
   cy.get('.card').first().contains('Wynajmij').click();
 
-  // Sprawdzamy, czy modal się pojawił, i czekamy chwilę, aby go zobaczyć
   cy.get('.modal').should('be.visible');
-  cy.wait(1000); // 1 sekunda, aby zobaczyć modal
+  cy.wait(1000); 
 
-  // Wypełniamy daty
+
   cy.get('input[type="date"]').first().type('2025-06-03');
   cy.get('input[type="date"]').last().type('2025-06-01');
 
-  // Czekamy chwilę, aby zobaczyć wprowadzone daty
-  cy.wait(1000); // 1 sekunda, aby zobaczyć wypełnione pola
-
-  // Klikamy przycisk "Wynajmij" w modalu
+  cy.wait(1000); 
   cy.get('.modal').find('button').contains('Wynajmij').click();
+  cy.wait(1000); 
 
-  // Czekamy chwilę, aby zobaczyć komunikat o błędzie
-  cy.wait(1000); // 1 sekunda, aby zobaczyć komunikat
-
-  // Sprawdzamy, czy komunikat o błędzie się pojawił
-  cy.get('div.alert').should('contain', 'Data zakończenia musi być późniejsza.');
+  
+  cy.get('div.alert').should('contain', 'Data zakończenia musi być późniejsza niż data rozpoczęcia.');
 });
 
   it('powinno wyświetlać mapę po kliknięciu na ogłoszenie', () => {

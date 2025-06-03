@@ -29,7 +29,7 @@
 }
 
 .form-check-input:checked {
-  background-color: #28a745 !important; /* Zielony kolor */
+  background-color: #28a745 !important; 
   border-color: #28a745 !important;
 }
 
@@ -37,7 +37,6 @@
   box-shadow: 0 0 5px rgba(40, 167, 69, 0.5) !important;
 }
 
-/* Przesunięcie kółka w przełączniku */
 .form-check-input:checked::before {
   transform: translateX(20px);
 }

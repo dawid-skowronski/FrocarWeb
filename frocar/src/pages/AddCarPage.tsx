@@ -14,7 +14,7 @@ const containerStyle = {
 };
 
 const defaultCenter = {
-  lat: 52.2297, 
+  lat: 52.2297,
   lng: 21.0122,
 };
 
@@ -58,7 +58,7 @@ const AddCarPage = () => {
     cardBackgroundColor,
     textColor,
     buttonColor,
-    errorColor,
+    errorColor, 
     inputBackgroundColor,
     borderColor,
     buttonBackgroundColor,
@@ -91,13 +91,13 @@ const AddCarPage = () => {
       const address = await reverseGeocode({ lat, lng });
       setSelectedAddress(address);
       setFormData((prev) => ({ ...prev, location: { lat, lng } }));
-      setShowMapModal(false);
+      setShowMapModal(false); 
     }
   };
 
   const geocodeAddress = async (address: string) => {
     if (!address.trim()) {
-      setMessage("Proszę wpisać adres.");
+      setMessage("Błąd: Proszę wpisać adres.");
       return;
     }
     if (!googleMapsApiKey) {
@@ -214,10 +214,10 @@ const AddCarPage = () => {
         }
       );
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || "Nie udało się dodać samochodu.");
+        const errorText = await response.text();
+        throw new Error(errorText || "Nie udało się dodać samochodu.");
       }
-      setMessage("Samochód dodany pomyślnie! Przekierowanie na strone głowna");
+      setMessage("Samochód dodany pomyślnie! Przekierowanie na stronę główną...");
       setFormData({
         brand: "",
         engineCapacity: "",
@@ -229,7 +229,7 @@ const AddCarPage = () => {
         location: null,
       });
       setSelectedAddress("");
-      setTimeout(() => navigate("/"), 3000); 
+      setTimeout(() => navigate("/"), 3000);
     } catch (error) {
       setMessage(`Błąd: ${error instanceof Error ? error.message : "Nieznany błąd."}`);
     }
@@ -238,7 +238,7 @@ const AddCarPage = () => {
   if (!googleMapsApiKey) {
     return (
       <p className="text-danger text-center mt-3">
-        Brak klucza API Google Maps. Sprawdź plik .env.
+        Błąd: Brak klucza API Google Maps. Sprawdź plik .env.
       </p>
     );
   }
@@ -249,17 +249,22 @@ const AddCarPage = () => {
     borderColor,
   };
 
-  const featureInputStyle = {
-    backgroundColor: inputBackgroundColor,
-    color: theme === "dark" ? "#ffffff" : "#000000",
-    borderColor,
-  };
-
   const deleteButtonStyle = {
     backgroundColor: "#dc3545",
     borderColor: "#dc3545",
     color: "white",
   };
+
+  const getPrimaryButtonStyles = () => ({
+    backgroundColor: buttonBackgroundColor,
+    border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+  });
+
+  const getSecondaryButtonStyles = () => ({
+    backgroundColor: theme === "dark" ? buttonBackgroundColor : "white",
+    borderColor: theme === "dark" ? buttonBorderColor : "gray",
+    color: theme === "dark" ? textColor : "black",
+  });
 
   return (
     <div
@@ -285,7 +290,7 @@ const AddCarPage = () => {
         {message && (
           <div
             className={`alert ${
-              message.includes("Błąd") ? errorColor : "alert-success"
+              message.includes("Błąd") ? errorColor || 'alert-danger' : "alert-success"
             } text-center`}
           >
             {message}
@@ -451,7 +456,7 @@ const AddCarPage = () => {
                 onChange={handleFeatureChange}
                 onKeyDown={handleAddFeature}
                 placeholder="Np. Klimatyzacja"
-                style={featureInputStyle}
+                style={inputStyle}
               />
               {formData.features.length > 0 && (
                 <div className="mt-3">
@@ -495,13 +500,7 @@ const AddCarPage = () => {
               <motion.button
                 type="button"
                 className={`btn ${buttonColor} w-100 rounded-pill text-white`}
-                style={{
-                  backgroundColor: buttonBackgroundColor,
-                  border:
-                    theme === "dark"
-                      ? `2px solid ${buttonBorderColor}`
-                      : undefined,
-                }}
+                style={getPrimaryButtonStyles()}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowMapModal(true)}
@@ -519,13 +518,7 @@ const AddCarPage = () => {
               <motion.button
                 type="submit"
                 className={`btn ${buttonColor} w-100 rounded-pill text-white`}
-                style={{
-                  backgroundColor: buttonBackgroundColor,
-                  border:
-                    theme === "dark"
-                      ? `2px solid ${buttonBorderColor}`
-                      : undefined,
-                }}
+                style={getPrimaryButtonStyles()}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -571,13 +564,7 @@ const AddCarPage = () => {
                 />
                 <Button
                   variant={buttonColor}
-                  style={{
-                    backgroundColor: buttonBackgroundColor,
-                    border:
-                      theme === "dark"
-                        ? `2px solid ${buttonBorderColor}`
-                        : undefined,
-                  }}
+                  style={getPrimaryButtonStyles()}
                   onClick={handleSearch}
                 >
                   Szukaj
@@ -613,11 +600,7 @@ const AddCarPage = () => {
             <Button
               variant="secondary"
               onClick={() => setShowMapModal(false)}
-              style={{
-                backgroundColor: theme === "dark" ? buttonBackgroundColor : "white",
-                borderColor: theme === "dark" ? buttonBorderColor : "gray",
-                color: theme === "dark" ? textColor : "black",
-              }}
+              style={getSecondaryButtonStyles()}
             >
               Zamknij
             </Button>

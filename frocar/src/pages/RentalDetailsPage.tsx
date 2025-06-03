@@ -26,11 +26,32 @@ interface Rental {
   hasReview?: boolean;
 }
 
+const ERROR_MESSAGES: Record<string, string> = {
+  "400": "Niepoprawne żądanie. Sprawdź dane i spróbuj ponownie.",
+  "401": "Brak autoryzacji. Zaloguj się ponownie.",
+  "403": "Brak uprawnień do wykonania tej operacji.",
+  "404": "Nie znaleziono zasobu.",
+  "500": "Wystąpił problem po stronie serwera. Spróbuj ponownie później.",
+  default: "Wystąpił nieoczekiwany błąd. Skontaktuj się z pomocą techniczną.",
+};
+
+const getErrorMessage = (error: any, context: string = "default"): string => {
+  if (error instanceof Error) {
+    try {
+      const errorData = JSON.parse(error.message);
+      return ERROR_MESSAGES[errorData.status] || errorData.message || ERROR_MESSAGES[context] || ERROR_MESSAGES.default;
+    } catch {
+      return error.message || ERROR_MESSAGES[context] || ERROR_MESSAGES.default;
+    }
+  }
+  return ERROR_MESSAGES[context] || ERROR_MESSAGES.default;
+};
+
 const RentalDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const [rental, setRental] = useState<Rental | null>(null);
   const [serverError, setServerError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); 
   const [reviewRating, setReviewRating] = useState<number>(0);
   const [reviewComment, setReviewComment] = useState<string>("");
   const [reviewError, setReviewError] = useState<string>("");
@@ -74,7 +95,7 @@ const RentalDetailsPage = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Błąd podczas pobierania szczegółów wypożyczenia.");
+        throw new Error(JSON.stringify({ status: response.status, message: errorData.message }));
       }
 
       const data = await response.json();
@@ -116,9 +137,7 @@ const RentalDetailsPage = () => {
 
       setRental(mappedRental);
     } catch (error) {
-      setServerError(
-        error instanceof Error ? error.message : "Błąd połączenia z serwerem."
-      );
+      setServerError(getErrorMessage(error, "fetchRental"));
     } finally {
       setLoading(false);
     }
@@ -129,7 +148,7 @@ const RentalDetailsPage = () => {
   }, [id, navigate]);
 
   const handleBack = () => {
-    navigate(-1); 
+    navigate(-1);
   };
 
   const handleCancelRental = async () => {
@@ -153,15 +172,13 @@ const RentalDetailsPage = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Błąd podczas anulowania wypożyczenia.");
+        throw new Error(JSON.stringify({ status: response.status, message: errorData.message }));
       }
 
       setServerError("Wypożyczenie zostało anulowane.");
-      setTimeout(() => navigate(-1), 2000); 
+      setTimeout(() => navigate(-1), 2000);
     } catch (error) {
-      setServerError(
-        error instanceof Error ? error.message : "Błąd połączenia z serwerem."
-      );
+      setServerError(getErrorMessage(error, "cancelRental"));
     }
   };
 
@@ -200,16 +217,8 @@ const RentalDetailsPage = () => {
       });
 
       if (!response.ok) {
-        let errorMessage = "Błąd podczas dodawania recenzji.";
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } else {
-          const errorText = await response.text();
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
+        const errorData = await response.json();
+        throw new Error(JSON.stringify({ status: response.status, message: errorData.message }));
       }
 
       const responseData = await response.json();
@@ -217,11 +226,10 @@ const RentalDetailsPage = () => {
       setReviewRating(0);
       setReviewComment("");
       setReviewError("");
-      setTimeout(() => navigate("/profile"), 2000); // Redirect to profile after review
+      fetchRentalDetails(); 
+      setTimeout(() => navigate("/profile"), 2000);
     } catch (error) {
-      setReviewError(
-        error instanceof Error ? error.message : "Błąd połączenia z serwerem."
-      );
+      setReviewError(getErrorMessage(error, "submitReview"));
       console.error("Review submission error:", error);
     }
   };
@@ -232,6 +240,22 @@ const RentalDetailsPage = () => {
     const diffTime = Math.abs(end.getTime() - start.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
+
+  const getPrimaryButtonStyles = () => ({
+    backgroundColor: buttonBackgroundColor,
+    border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
+  });
+
+  const getSecondaryCardBackground = () => ({
+    backgroundColor: theme === "dark" ? "#343a40" : "#f8f9fa",
+  });
+
+  const getTextAreaStyle = () => ({
+    backgroundColor: theme === "dark" ? "#343a40" : "#fff",
+    color: textColor,
+  });
+
+  const getStarColor = (star: number) => (star <= reviewRating ? "#ffc107" : "#6c757d");
 
   if (loading) {
     return (
@@ -249,7 +273,7 @@ const RentalDetailsPage = () => {
     );
   }
 
-  if (serverError) {
+  if (serverError && !rental) { 
     return (
       <div
         className={`d-flex justify-content-center align-items-center min-vh-100 theme-${theme}`}
@@ -270,10 +294,7 @@ const RentalDetailsPage = () => {
           <motion.button
             onClick={handleBack}
             className={`btn ${buttonColor} w-100 rounded-pill text-white`}
-            style={{
-              backgroundColor: buttonBackgroundColor,
-              border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
-            }}
+            style={getPrimaryButtonStyles()}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -286,11 +307,17 @@ const RentalDetailsPage = () => {
   }
 
   if (!rental) {
-    return null;
+    return null; 
   }
 
   const duration = calculateDuration(rental.rentalStartDate, rental.rentalEndDate);
   const totalCost = duration * rental.carListing.rentalPricePerDay;
+
+  const dateFormatOptions: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  };
 
   return (
     <div
@@ -315,10 +342,7 @@ const RentalDetailsPage = () => {
           <motion.button
             onClick={handleBack}
             className={`btn ${buttonColor} rounded-pill text-white`}
-            style={{
-              backgroundColor: buttonBackgroundColor,
-              border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
-            }}
+            style={getPrimaryButtonStyles()}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -327,14 +351,18 @@ const RentalDetailsPage = () => {
           </motion.button>
         </div>
 
+        {serverError && ( 
+          <div className={`alert ${errorColor} text-center mb-3 rounded-pill`}>
+            {serverError}
+          </div>
+        )}
+
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4 }}
           className="mb-4 p-3 rounded"
-          style={{
-            backgroundColor: theme === "dark" ? "#343a40" : "#f8f9fa",
-          }}
+          style={getSecondaryCardBackground()}
         >
           <h4 className="d-flex align-items-center mb-3" style={{ color: textColor }}>
             <FaCar className="me-2" style={{ fontSize: "1.5em" }} />
@@ -346,16 +374,8 @@ const RentalDetailsPage = () => {
                 <strong>Okres wypożyczenia:</strong>
               </p>
               <p style={{ color: textColor }}>
-                Od: {new Date(rental.rentalStartDate).toLocaleDateString("pl-PL", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}{" "}
-                Do: {new Date(rental.rentalEndDate).toLocaleDateString("pl-PL", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
+                Od: {new Date(rental.rentalStartDate).toLocaleDateString("pl-PL", dateFormatOptions)}{" "}
+                Do: {new Date(rental.rentalEndDate).toLocaleDateString("pl-PL", dateFormatOptions)}
               </p>
               <p style={{ color: textColor }}>
                 <strong>Czas trwania:</strong> {duration} dni
@@ -403,21 +423,19 @@ const RentalDetailsPage = () => {
           </div>
         </motion.div>
 
-        {rental.rentalStatus === "Zakończone" && !reviewSuccess && (
+        {rental.rentalStatus === "Zakończone" && !rental.hasReview && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
             className="mb-4 p-3 rounded"
-            style={{
-              backgroundColor: theme === "dark" ? "#343a40" : "#f8f9fa",
-            }}
+            style={getSecondaryCardBackground()}
           >
             <h5 className="mb-3" style={{ color: textColor }}>
               Wystaw recenzję
             </h5>
             {reviewError && (
-              <div className={`alert ${errorColor} text-center mb-3`}>{reviewError}</div>
+              <div className={`alert ${errorColor} text-center mb-3 rounded-pill`}>{reviewError}</div>
             )}
             <div className="mb-3">
               <label className="form-label" style={{ color: textColor }}>
@@ -429,7 +447,7 @@ const RentalDetailsPage = () => {
                     key={star}
                     className="me-1"
                     style={{
-                      color: star <= reviewRating ? "#ffc107" : "#6c757d",
+                      color: getStarColor(star),
                       cursor: "pointer",
                       fontSize: "1.5em",
                     }}
@@ -443,20 +461,17 @@ const RentalDetailsPage = () => {
                 Komentarz
               </label>
               <textarea
-                className="form-control"
+                className="form-control rounded" 
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
                 rows={4}
-                style={{ backgroundColor: theme === "dark" ? "#343a40" : "#fff", color: textColor }}
+                style={getTextAreaStyle()}
               />
             </div>
             <motion.button
               onClick={handleSubmitReview}
               className={`btn ${buttonColor} w-100 rounded-pill text-white`}
-              style={{
-                backgroundColor: buttonBackgroundColor,
-                border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined,
-              }}
+              style={getPrimaryButtonStyles()}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -466,7 +481,7 @@ const RentalDetailsPage = () => {
         )}
 
         {reviewSuccess && (
-          <div className="alert alert-success text-center mb-3">{reviewSuccess}</div>
+          <div className="alert alert-success text-center mb-3 rounded-pill">{reviewSuccess}</div>
         )}
 
         {rental.rentalStatus !== "Zakończone" && (

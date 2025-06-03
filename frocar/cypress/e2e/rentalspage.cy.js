@@ -1,11 +1,9 @@
 describe('RentalsPage', () => {
-  // Obsługa nieoczekiwanych wyjątków
   Cypress.on('uncaught:exception', (err, runnable) => {
     console.error('Nieoczekiwany wyjątek:', err.message);
     return false;
   });
 
-  // Funkcja pomocnicza do logowania
   const loginUser = () => {
     cy.request({
       method: 'POST',
@@ -46,11 +44,10 @@ describe('RentalsPage', () => {
   beforeEach(() => {
     loginUser();
     cy.visit('/');
-    cy.wait(1000); // Dodaj opóźnienie
+    cy.wait(1000); 
   });
 
   it('powinno poprawnie renderować stronę wypożyczeń dla zalogowanego użytkownika', () => {
-    // Mock listy wypożyczeń
     cy.intercept('GET', 'https://localhost:5001/api/CarRental/user', {
       statusCode: 200,
       body: [
@@ -79,41 +76,28 @@ describe('RentalsPage', () => {
       ],
     }).as('getRentals');
 
-    // Wejdź na RentalsPage
+    
     cy.visit('/rentals');
-    cy.wait(1000); // Dodaj opóźnienie
+    cy.wait(1000); 
     cy.wait('@getRentals');
-
-    // Sprawdź nagłówek
     cy.get('h2').should('have.text', 'Moje wypożyczenia');
-    cy.wait(1000); // Dodaj opóźnienie
-
-    // Sprawdź przycisk odświeżania
     cy.get('button').contains('Odśwież').should('be.visible');
-    cy.wait(1000); // Dodaj opóźnienie
-
-    // Sprawdź listę wypożyczeń
+    cy.wait(1000); 
     cy.get('.list-group-item').should('have.length', 2);
-    cy.wait(1000); // Dodaj opóźnienie
+    cy.wait(1000);
     cy.get('.list-group-item').first().within(() => {
       cy.contains('Toyota (sedan)').should('be.visible');
-      cy.wait(500); // Dodaj opóźnienie
-      cy.contains(/Od: \d{2}\.\d{2}\.\d{4}/).should('be.visible');
-      cy.wait(500); // Dodaj opóźnienie
+      cy.wait(500); 
+      cy.contains(/Od: \d{2}\.\d{2}\.\d{4}/).should('be.visible'); 
       cy.contains(/Do: \d{2}\.\d{2}\.\d{4}/).should('be.visible');
-      cy.wait(500); // Dodaj opóźnienie
       cy.contains('Status: Active').should('be.visible');
-      cy.wait(500); // Dodaj opóźnienie
       cy.contains('Cena za dzień: 100 zł').should('be.visible');
-      cy.wait(500); // Dodaj opóźnienie
       cy.contains('Szczegóły').should('be.visible');
-      cy.wait(500); // Dodaj opóźnienie
       cy.contains('Anuluj').should('be.visible');
     });
   });
 
   it('powinno wyświetlać komunikat o braku aktywnych wypożyczeń', () => {
-    // Mock pustej listy wypożyczeń
     cy.intercept('GET', 'https://localhost:5001/api/CarRental/user', {
       statusCode: 200,
       body: [],
@@ -128,7 +112,6 @@ describe('RentalsPage', () => {
   });
 
   it('powinno wyświetlać komunikat o błędzie przy pobieraniu wypożyczeń', () => {
-    // Mock błędu przy pobieraniu wypożyczeń
     cy.intercept('GET', 'https://localhost:5001/api/CarRental/user', {
       statusCode: 500,
       body: { message: 'Wystąpił błąd serwera' },
@@ -138,12 +121,11 @@ describe('RentalsPage', () => {
     cy.wait(1000);
     cy.wait('@getRentals');
 
-    cy.contains('Błąd: Problem po stronie serwera. {"message":"Wystąpił błąd serwera"}').should('be.visible');
+    cy.contains('Wystąpił nieoczekiwany błąd. Skontaktuj się z pomocą techniczną.').should('be.visible');
     cy.wait(1000);
   });
 
   it('powinno anulować wypożyczenie', () => {
-    // Mock listy wypożyczeń
     cy.intercept('GET', 'https://localhost:5001/api/CarRental/user', {
       statusCode: 200,
       body: [
@@ -161,7 +143,6 @@ describe('RentalsPage', () => {
       ],
     }).as('getRentals');
 
-    // Mock anulowania wypożyczenia
     cy.intercept('DELETE', 'https://localhost:5001/api/CarRental/1', {
       statusCode: 200,
       body: { message: 'Wypożyczenie zostało anulowane' },
@@ -181,7 +162,6 @@ describe('RentalsPage', () => {
   });
 
   it('powinno wyświetlać komunikat o błędzie przy anulowaniu wypożyczenia', () => {
-    // Mock listy wypożyczeń
     cy.intercept('GET', 'https://localhost:5001/api/CarRental/user', {
       statusCode: 200,
       body: [
@@ -199,7 +179,6 @@ describe('RentalsPage', () => {
       ],
     }).as('getRentals');
 
-    // Mock błędu przy anulowaniu wypożyczenia
     cy.intercept('DELETE', 'https://localhost:5001/api/CarRental/1', {
       statusCode: 500,
       body: { message: 'Wystąpił błąd serwera' },
@@ -213,12 +192,11 @@ describe('RentalsPage', () => {
     cy.wait(1000);
     cy.wait('@cancelRental');
 
-    cy.contains('Błąd: Problem po stronie serwera. {"message":"Wystąpił błąd serwera"}').should('be.visible');
+    cy.contains('Wystąpił nieoczekiwany błąd. Skontaktuj się z pomocą techniczną.').should('be.visible');
     cy.wait(1000);
   });
 
   it('powinno przekierować do szczegółów wypożyczenia', () => {
-  // Mock listy wypożyczeń
   cy.intercept('GET', 'https://localhost:5001/api/CarRental/user', {
     statusCode: 200,
     body: [
@@ -236,18 +214,15 @@ describe('RentalsPage', () => {
     ],
   }).as('getRentals');
 
-  // Wejdź na RentalsPage
   cy.visit('/rentals');
-  cy.wait(1000); // Opóźnienie, aby zobaczyć ładowanie strony
+  cy.wait(1000); 
   cy.log('Strona wypożyczeń załadowana');
   cy.wait('@getRentals');
 
-  // Kliknij "Szczegóły" dla pierwszego wypożyczenia
   cy.log('Kliknięcie przycisku "Szczegóły"');
   cy.get('.list-group-item').first().contains('Szczegóły').click();
-  cy.wait(1000); // Opóźnienie, aby zobaczyć przejście do szczegółów
+  cy.wait(1000); 
 
-  // Sprawdź przekierowanie na stronę szczegółów wypożyczenia
   cy.url().should('include', '/rentals/1');
   cy.log('Przekierowano do strony szczegółów wypożyczenia');
 });

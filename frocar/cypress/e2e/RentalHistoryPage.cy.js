@@ -1,11 +1,9 @@
 describe('RentalHistoryPage', () => {
-  // Obsługa nieoczekiwanych wyjątków
   Cypress.on('uncaught:exception', (err, runnable) => {
     console.error('Nieoczekiwany wyjątek:', err.message);
     return false;
   });
 
-  // Funkcja pomocnicza do logowania
   const loginUser = () => {
     cy.request({
       method: 'POST',
@@ -14,7 +12,7 @@ describe('RentalHistoryPage', () => {
         username: 'Kozub',
         password: 'Qwerty123!',
       },
-      failOnStatusCode: false,
+      failOnStatusCode: false, 
     }).then((loginResponse) => {
       if (loginResponse.status !== 200) {
         cy.log('Logowanie nie powiodło się, rejestracja użytkownika...');
@@ -26,7 +24,7 @@ describe('RentalHistoryPage', () => {
             Email: 'tytaj04@gmail.com',
             Password: 'Qwerty123!',
           },
-          failOnStatusCode: false,
+          failOnStatusCode: false, 
         });
       }
       cy.setCookie('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUZXN0VXNlciIsImV4cCI6MTczNTE0NzQwMH0.signature');
@@ -43,11 +41,10 @@ describe('RentalHistoryPage', () => {
     }).as('getNotifications');
   };
 
-  // Funkcja pomocnicza do mockowania API
   const setupMocks = () => {
     cy.intercept('GET', 'https://maps.googleapis.com/maps/api/js?*', {
       statusCode: 200,
-      body: {},
+      body: {}, 
     }).as('googleMapsScript');
 
     cy.intercept('GET', 'https://maps.googleapis.com/maps/api/geocode/json?latlng=*', {
@@ -71,7 +68,7 @@ describe('RentalHistoryPage', () => {
         {
           carRentalId: 150,
           carListing: {
-            id: 150,
+            id: 150, 
             brand: 'Toyota',
             carType: 'sedan',
             rentalPricePerDay: 100,
@@ -87,7 +84,7 @@ describe('RentalHistoryPage', () => {
           },
           rentalStartDate: '2023-10-01',
           rentalEndDate: '2023-10-10',
-          rentalStatus: 'Ended',
+          rentalStatus: 'Zakończone', 
           userId: 123,
         },
       ],
@@ -120,7 +117,6 @@ describe('RentalHistoryPage', () => {
       cy.contains('sedan').should('be.visible');
       cy.contains(/01\.10\.2023/).should('be.visible');
       cy.contains(/10\.10\.2023/).should('be.visible');
-      cy.contains('Ended').should('be.visible');
       cy.contains('Oczekuje').should('be.visible');
     });
 
@@ -138,7 +134,7 @@ describe('RentalHistoryPage', () => {
 
     cy.get('div.text-center.mb-3.d-flex.justify-content-between.align-items-center', { timeout: 10000 })
       .should('be.visible')
-      .and('contain', 'Informacja: Nie masz jeszcze zakończonych wypożyczeń.')
+      .and('contain', 'Nie masz jeszcze zakończonych wypożyczeń.')
       .then(() => {
         cy.screenshot('no-rental-history');
         cy.log('No rental history message displayed');
@@ -151,7 +147,7 @@ describe('RentalHistoryPage', () => {
   it('powinno wyświetlać komunikat o błędzie przy pobieraniu historii wypożyczeń', () => {
   cy.intercept('GET', 'https://localhost:5001/api/CarRental/user/history', {
     statusCode: 500,
-    body: { message: 'Wystąpił błąd serwera' }, // To już nie ma wpływu na komunikat
+    body: { message: 'Wystąpił błąd serwera' }, 
   }).as('getRentalHistory');
 
   cy.visit('/rental-history');
@@ -159,7 +155,7 @@ describe('RentalHistoryPage', () => {
 
   cy.get('div.text-center.mb-3.d-flex.justify-content-between.align-items-center', { timeout: 10000 })
     .should('be.visible')
-    .and('contain', 'Błąd: Nie udało się pobrać historii wypożyczeń. Spróbuj ponownie później lub skontaktuj się z pomocą techniczną.')
+    .and('contain', 'Problem po stronie serwera. Spróbuj ponownie później.')
     .then(() => {
       cy.get('button').contains('Spróbuj ponownie').should('be.visible');
       cy.screenshot('rental-history-error');

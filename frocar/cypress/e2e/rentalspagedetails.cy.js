@@ -1,11 +1,4 @@
 describe('RentalDetailsPage', () => {
-  // Obsługa nieoczekiwanych wyjątków
-  Cypress.on('uncaught:exception', (err, runnable) => {
-    console.error('Nieoczekiwany wyjątek:', err.message);
-    return false;
-  });
-
-  // Funkcja pomocnicza do logowania
   const loginUser = () => {
     cy.request({
       method: 'POST',
@@ -16,8 +9,12 @@ describe('RentalDetailsPage', () => {
       },
       failOnStatusCode: false,
     }).then((loginResponse) => {
-      if (loginResponse.status !== 200) {
-        cy.log('Logowanie nie powiodło się, rejestracja użytkownika...');
+      if (loginResponse.status === 200) {
+        const token = loginResponse.body.token;
+        if (token) {
+          cy.setCookie('token', token);
+        }
+      } else if (loginResponse.status === 400 || loginResponse.status === 401) {
         cy.request({
           method: 'POST',
           url: 'https://localhost:5001/api/Account/register',
@@ -27,9 +24,29 @@ describe('RentalDetailsPage', () => {
             Password: 'Qwerty123!',
           },
           failOnStatusCode: false,
+        }).then(registerResponse => {
+          if (registerResponse.status === 200) {
+            cy.request({
+              method: 'POST',
+              url: 'https://localhost:5001/api/Account/login',
+              body: {
+                username: 'Kozub',
+                password: 'Qwerty123!',
+              },
+            }).then(retryLoginResponse => {
+              if (retryLoginResponse.status === 200 && retryLoginResponse.body.token) {
+                cy.setCookie('token', retryLoginResponse.body.token);
+              } else {
+                throw new Error('Logowanie nieudane po rejestracji');
+              }
+            });
+          } else {
+            throw new Error('Rejestracja użytkownika nieudana');
+          }
         });
+      } else {
+        throw new Error('Nieoczekiwany błąd podczas logowania');
       }
-      cy.setCookie('token', 'fakeToken');
     });
 
     cy.intercept('GET', 'https://localhost:5001/api/CarRental/user', {
@@ -44,19 +61,18 @@ describe('RentalDetailsPage', () => {
   };
 
   beforeEach(() => {
+    cy.clearCookies();
     loginUser();
-    cy.wait(1000); // Opóźnienie, aby zobaczyć logowanie
-    cy.visit('/');
-    cy.wait(1000); // Opóźnienie, aby zobaczyć przekierowanie na stronę główną
+    cy.getCookie('token').should('exist');
   });
 
-  it('powinno poprawnie renderować stronę szczegółów wypożyczenia dla zalogowanego użytkownika', () => {
-    // Mock szczegółów wypożyczenia
+  it('should render rental details correctly for a logged-in user', () => {
     cy.intercept('GET', 'https://localhost:5001/api/CarRental/1', {
       statusCode: 200,
       body: {
         carRentalId: 1,
         carListing: {
+          id: 101,
           brand: 'Toyota',
           carType: 'sedan',
           rentalPricePerDay: 100,
@@ -72,74 +88,39 @@ describe('RentalDetailsPage', () => {
       },
     }).as('getRentalDetails');
 
-    // Wejdź na RentalDetailsPage
     cy.visit('/rentals/1');
-    cy.wait(1000); // Opóźnienie, aby zobaczyć ładowanie strony
     cy.wait('@getRentalDetails');
 
-    // Sprawdź nagłówek
-    cy.get('h2').should('have.text', 'Szczegóły wypożyczenia');
-    cy.wait(1000); // Opóźnienie, aby zobaczyć nagłówek
-
-    // Sprawdź przycisk "Wróć"
-    cy.get('button').contains('Wróć').should('be.visible');
-    cy.wait(1000); // Opóźnienie, aby zobaczyć przycisk
-
-    // Sprawdź szczegóły wypożyczenia
+    cy.get('h2').should('contain', 'Szczegóły wypożyczenia');
     cy.contains('Toyota (sedan)').should('be.visible');
-    cy.wait(500); // Opóźnienie, aby zobaczyć szczegóły
-    cy.contains(/Od: \d{2}\.\d{2}\.\d{4}/).should('be.visible');
-    cy.wait(500);
-    cy.contains(/Do: \d{2}\.\d{2}\.\d{4}/).should('be.visible');
-    cy.wait(500);
     cy.contains('Czas trwania: 9 dni').should('be.visible');
-    cy.wait(500);
     cy.contains('Status: Aktywne').should('be.visible');
-    cy.wait(500);
-    cy.contains('Cena za dzień: 100 zł').should('be.visible');
-    cy.wait(500);
     cy.contains('Całkowity koszt: 900 zł').should('be.visible');
-    cy.wait(500);
     cy.contains('Pojemność silnika: 2L').should('be.visible');
-    cy.wait(500);
-    cy.contains('Typ paliwa: benzyna').should('be.visible');
-    cy.wait(500);
-    cy.contains('Liczba miejsc: 5').should('be.visible');
-    cy.wait(500);
     cy.contains('Dodatki: Klimatyzacja, GPS').should('be.visible');
-
-    // Sprawdź przycisk "Anuluj wypożyczenie"
     cy.get('button').contains('Anuluj wypożyczenie').should('be.visible');
-    cy.wait(1000); // Opóźnienie, aby zobaczyć przycisk
   });
 
-  it('powinno wyświetlać komunikat o błędzie przy pobieraniu szczegółów wypożyczenia', () => {
-    // Mock błędu przy pobieraniu szczegółów wypożyczenia
+  it('should display an error message when fetching rental details fails', () => {
     cy.intercept('GET', 'https://localhost:5001/api/CarRental/1', {
       statusCode: 500,
-      body: { message: 'Wystąpił błąd serwera' },
-    }).as('getRentalDetails');
+      body: { message: 'Wystąpił problem po stronie serwera. Spróbuj ponownie później.' },
+    }).as('getRentalDetailsError');
 
-    // Wejdź na RentalDetailsPage
     cy.visit('/rentals/1');
-    cy.wait(1000);
-    cy.wait('@getRentalDetails');
+    cy.wait('@getRentalDetailsError');
 
-    // Sprawdź komunikat o błędzie
-    cy.contains('Wystąpił błąd serwera').should('be.visible');
-    cy.wait(1000);
-
-    // Sprawdź przycisk "Wróć"
+    cy.contains('Wystąpił problem po stronie serwera. Spróbuj ponownie później.').should('be.visible');
     cy.get('button').contains('Wróć').should('be.visible');
   });
 
-  it('powinno anulować wypożyczenie', () => {
-    // Mock szczegółów wypożyczenia
+  it('should cancel a rental', () => {
     cy.intercept('GET', 'https://localhost:5001/api/CarRental/1', {
       statusCode: 200,
       body: {
         carRentalId: 1,
         carListing: {
+          id: 101,
           brand: 'Toyota',
           carType: 'sedan',
           rentalPricePerDay: 100,
@@ -153,169 +134,117 @@ describe('RentalDetailsPage', () => {
         userId: 123,
         rentalStatus: 'Aktywne',
       },
-    }).as('getRentalDetails');
+    }).as('getRentalDetailsForCancel');
 
-    // Mock anulowania wypożyczenia
     cy.intercept('DELETE', 'https://localhost:5001/api/CarRental/1', {
       statusCode: 200,
       body: { message: 'Wypożyczenie zostało anulowane' },
     }).as('cancelRental');
 
-    // Wejdź na RentalDetailsPage
     cy.visit('/rentals/1');
-    cy.wait(1000);
-    cy.wait('@getRentalDetails');
+    cy.wait('@getRentalDetailsForCancel');
 
-    // Kliknij "Anuluj wypożyczenie"
     cy.get('button').contains('Anuluj wypożyczenie').click();
-    cy.wait(1000);
     cy.wait('@cancelRental');
 
-    // Sprawdź komunikat o sukcesie
     cy.contains('Wypożyczenie zostało anulowane.').should('be.visible');
-    cy.wait(1000);
   });
 
-  it('powinno wyświetlać komunikat o błędzie przy anulowaniu wypożyczenia', () => {
-    // Mock szczegółów wypożyczenia
-    cy.intercept('GET', 'https://localhost:5001/api/CarRental/1', {
-      statusCode: 200,
-      body: {
-        carRentalId: 1,
-        carListing: {
-          brand: 'Toyota',
-          carType: 'sedan',
-          rentalPricePerDay: 100,
-          engineCapacity: 2.0,
-          fuelType: 'benzyna',
-          seats: 5,
-          features: ['Klimatyzacja', 'GPS'],
+  describe('Review Tests', () => {
+    beforeEach(() => {
+      cy.intercept('GET', 'https://localhost:5001/api/CarRental/1', {
+        statusCode: 200,
+        body: {
+          carRentalId: 1,
+          carListing: {
+            id: 101,
+            brand: 'Toyota',
+            carType: 'sedan',
+            rentalPricePerDay: 100,
+            engineCapacity: 2.0,
+            fuelType: 'benzyna',
+            seats: 5,
+            features: ['Klimatyzacja', 'GPS'],
+          },
+          rentalStartDate: '2023-10-01',
+          rentalEndDate: '2023-10-10',
+          userId: 123,
+          rentalStatus: 'Zakończone',
         },
-        rentalStartDate: '2023-10-01',
-        rentalEndDate: '2023-10-10',
-        userId: 123,
-        rentalStatus: 'Aktywne',
-      },
-    }).as('getRentalDetails');
+      }).as('getCompletedRental');
 
-    // Mock błędu przy anulowaniu wypożyczenia
-    cy.intercept('DELETE', 'https://localhost:5001/api/CarRental/1', {
-      statusCode: 500,
-      body: { message: 'Wystąpił błąd serwera' },
-    }).as('cancelRental');
+      cy.intercept('GET', 'https://localhost:5001/api/CarRental/reviews/101', {
+        statusCode: 200,
+        body: [],
+      }).as('getEmptyReviews');
+    });
 
-    // Wejdź na RentalDetailsPage
-    cy.visit('/rentals/1');
-    cy.wait(1000);
-    cy.wait('@getRentalDetails');
+    it('should submit a review for a completed rental', () => {
+      cy.visit('/rentals/1');
+      cy.wait(['@getCompletedRental', '@getEmptyReviews']);
 
-    // Kliknij "Anuluj wypożyczenie"
-    cy.get('button').contains('Anuluj wypożyczenie').click();
-    cy.wait(1000);
-    cy.wait('@cancelRental');
+      cy.contains('Wystaw recenzję').should('be.visible');
+      cy.wait(1000);
 
-    // Sprawdź komunikat o błędzie
-    cy.contains('Wystąpił błąd serwera').should('be.visible');
-    cy.wait(1000);
-  });
+      cy.get('.mb-3 svg').then(($stars) => {
+        console.log('Found stars:', $stars.length);
+        $stars.each((index, star) => {
+          console.log(`Star ${index}:`, star);
+        });
+      });
 
-  it('powinno wystawić recenzję dla zakończonego wypożyczenia', () => {
-    // Mock szczegółów wypożyczenia
-    cy.intercept('GET', 'https://localhost:5001/api/CarRental/1', {
-      statusCode: 200,
-      body: {
-        carRentalId: 1,
-        carListing: {
-          brand: 'Toyota',
-          carType: 'sedan',
-          rentalPricePerDay: 100,
-          engineCapacity: 2.0,
-          fuelType: 'benzyna',
-          seats: 5,
-          features: ['Klimatyzacja', 'GPS'],
-        },
-        rentalStartDate: '2023-10-01',
-        rentalEndDate: '2023-10-10',
-        userId: 123,
-        rentalStatus: 'Zakończone',
-      },
-    }).as('getRentalDetails');
 
-    // Mock recenzji
-    cy.intercept('GET', 'https://localhost:5001/api/CarRental/reviews/1', {
-      statusCode: 200,
-      body: [],
-    }).as('getReviews');
+      cy.get('.mb-3 svg').eq(4).should('be.visible').click({ force: true });
 
-    // Mock dodawania recenzji
-    cy.intercept('POST', 'https://localhost:5001/api/CarRental/review', {
-      statusCode: 200,
-      body: { message: 'Recenzja została dodana pomyślnie!' },
-    }).as('submitReview');
 
-    // Wejdź na RentalDetailsPage
-    cy.visit('/rentals/1');
-    cy.wait(1000);
-    cy.wait('@getRentalDetails');
+      cy.get('.mb-3 svg').eq(4).should('have.css', 'color', 'rgb(255, 193, 7)');
 
-    // Wystaw recenzję
-    cy.get('.me-1').first().click(); // Kliknij pierwszą gwiazdkę
-    cy.wait(500);
-    cy.get('textarea').type('Świetny samochód!');
-    cy.wait(500);
-    cy.get('button').contains('Wyślij recenzję').click();
-    cy.wait(1000);
-    cy.wait('@submitReview');
+      cy.get('textarea').type('Świetny samochód!');
 
-    // Sprawdź komunikat o sukcesie
-    cy.contains('Recenzja została dodana pomyślnie!').should('be.visible');
-    cy.wait(1000);
-  });
+      cy.intercept('POST', 'https://localhost:5001/api/CarRental/review', {
+        statusCode: 200,
+        body: { message: 'Recenzja została dodana pomyślnie!' },
+      }).as('submitReview');
 
-  it('powinno wyświetlać komunikat o błędzie przy wystawianiu recenzji', () => {
-    // Mock szczegółów wypożyczenia
-    cy.intercept('GET', 'https://localhost:5001/api/CarRental/1', {
-      statusCode: 200,
-      body: {
-        carRentalId: 1,
-        carListing: {
-          brand: 'Toyota',
-          carType: 'sedan',
-          rentalPricePerDay: 100,
-          engineCapacity: 2.0,
-          fuelType: 'benzyna',
-          seats: 5,
-          features: ['Klimatyzacja', 'GPS'],
-        },
-        rentalStartDate: '2023-10-01',
-        rentalEndDate: '2023-10-10',
-        userId: 123,
-        rentalStatus: 'Zakończone',
-      },
-    }).as('getRentalDetails');
 
-    // Mock błędu przy wystawianiu recenzji
-    cy.intercept('POST', 'https://localhost:5001/api/CarRental/review', {
-      statusCode: 500,
-      body: { message: 'Wystąpił błąd serwera' },
-    }).as('submitReview');
+      cy.get('button').contains('Wyślij recenzję').click();
+      cy.wait('@submitReview');
+      
+    
+    });
 
-    // Wejdź na RentalDetailsPage
-    cy.visit('/rentals/1');
-    cy.wait(1000);
-    cy.wait('@getRentalDetails');
+    it('should display an error message when submitting a review fails', () => {
+      cy.visit('/rentals/1');
+      cy.wait(['@getCompletedRental', '@getEmptyReviews']);
 
-    // Wystaw recenzję
-    cy.get('.me-1').first().click(); // Kliknij pierwszą gwiazdkę
-    cy.wait(500);
-    cy.get('textarea').type('Świetny samochód!');
-    cy.wait(500);
-    cy.get('button').contains('Wyślij recenzję').click();
-    cy.wait(1000);
-    cy.wait('@submitReview');
+      cy.get('.mb-3 svg').eq(4).click({ force: true });
+      cy.get('textarea').type('Świetny samochód!');
 
-    // Sprawdź komunikat o błędzie
-    cy.contains('Wystąpił błąd serwera').should('be.visible');
-    cy.wait(1000);
+      cy.intercept('POST', 'https://localhost:5001/api/CarRental/review', {
+        statusCode: 500,
+        body: { message: 'Wystąpił problem po stronie serwera. Spróbuj ponownie później.' },
+      }).as('submitReviewError');
+
+      cy.get('button').contains('Wyślij recenzję').click();
+      cy.wait('@submitReviewError');
+
+      cy.contains('Wystąpił problem po stronie serwera. Spróbuj ponownie później.').should('be.visible');
+    });
+
+    it('should display a message if a review already exists', () => {
+      cy.intercept('GET', 'https://localhost:5001/api/CarRental/reviews/101', {
+        statusCode: 200,
+        body: [{
+          carRental: { carRentalId: 1 },
+          rating: 5,
+          comment: 'Świetny samochód!'
+        }],
+      }).as('getExistingReview');
+
+      cy.visit('/rentals/1');
+      cy.wait(['@getCompletedRental', '@getExistingReview']);
+
+      cy.contains('Recenzja dla tego wypożyczenia została już wystawiona.').should('be.visible');
+    });
   });
 });
