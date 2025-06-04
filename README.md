@@ -10,7 +10,7 @@
 | RENT-05   | Administrator może zatwierdzać i usuwać ogłoszenia użytkowników. | ✅    |     |        | ✓       |
 | RENT-06   | Administrator widzi statystyki systemowe.               |    |     |        | ✓       |
 | RENT-07   | Użytkownik może przeglądać dostępne pojazdy.            | ✅    | ✅   | ✅     |         |
-| RENT-08   | Użytkownik może filtrować pojazdy według kategorii, ceny i lokalizacji. | ✅    | ✅  | ✓      |         |
+| RENT-08   | Użytkownik może filtrować pojazdy według kategorii, ceny i lokalizacji. | ✅    | ✅  |  ✅     |         |
 | RENT-09   | Użytkownik może zobaczyć lokalizację pojazdu na mapie.  | ✅    | ✅   | ✅      |         |
 | RENT-10   | Użytkownik może zarejestrować się w systemie.           | ✅    | ✅   | ✅      |         |
 | RENT-11   | Użytkownik może zalogować się w systemie.               | ✅    | ✅   | ✅      |         |
