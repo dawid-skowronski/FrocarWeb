@@ -25,9 +25,9 @@ const REFRESH_INTERVAL = 30000;
 const ERROR_MESSAGES: Record<string, string> = {
   "401": "Sesja wygasła. Zaloguj się ponownie, aby zobaczyć swoje wypożyczenia.",
   "403": "Brak uprawnień do wyświetlenia wypożyczeń.",
-  "404": "Nie znaleziono aktywnych wypożyczeń.",
+  "404": "Wystąpił nieoczekiwany błąd. Skontaktuj się z pomocą techniczną",
   "500": "Wystąpił problem po stronie serwera. Spróbuj ponownie później.",
-  default: "Wystąpił nieoczekiwany błąd. Skontaktuj się z pomocą techniczną.",
+  default: "Nie znaleziono aktywnych wypożyczeń.",
 };
 
 const getErrorMessage = (error: any, context: string = "default"): string => {
@@ -78,6 +78,17 @@ const RentalsPage = () => {
   const getListItemHoverBackgroundStyle = () => ({
     backgroundColor: theme === "dark" ? "#3e444a" : "#e9ecef",
   });
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "Zakończone":
+        return { color: "green" };
+      case "Anulowane":
+        return { color: "red" };
+      default:
+        return { color: textColor };
+    }
+  };
 
   const fetchRentals = async () => {
     setLoading(true);
@@ -132,7 +143,7 @@ const RentalsPage = () => {
     }
   };
 
-  const handleCancelRental = async (rentalId: number) => {
+  const handleCancelRental = async (id: number) => {
     const token = Cookies.get("token");
     if (!token) {
       setServerMessage(ERROR_MESSAGES["401"]);
@@ -141,7 +152,7 @@ const RentalsPage = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/CarListings/${rentalId}`, {
+      const response = await fetch(`${API_URL}/api/CarRental/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -154,7 +165,7 @@ const RentalsPage = () => {
         throw new Error(errorText || `HTTP ${response.status}`);
       }
 
-      setRentals(rentals.filter((rental) => rental.id !== rentalId));
+      setRentals(rentals.filter((rental) => rental.id !== id));
       setServerMessage("Sukces: Wypożyczenie zostało anulowane.");
     } catch (error) {
       setServerMessage(getErrorMessage(error, "cancel"));
@@ -169,8 +180,8 @@ const RentalsPage = () => {
 
   const handleRetry = () => fetchRentals();
 
-  const handleViewDetails = (rentalId: number) => {
-    navigate(`/rentals/${rentalId}`);
+  const handleViewDetails = (id: number) => {
+    navigate(`/rentals/${id}`);
   };
 
   const dateFormatOptions: Intl.DateTimeFormatOptions = {
@@ -231,7 +242,7 @@ const RentalsPage = () => {
             <p className="mt-2" style={{ color: textColor }}>Ładowanie...</p>
           </div>
         ) : rentals.length === 0 && !serverMessage ? (
-          <p className="text-center" style={{ color: textColor }}>Brak aktywnych wypożyczeń.</p>
+          <p className="text-center" style={{ color: textColor }}>Brak aktywnych, zakończonych lub anulowanych wypożyczeń.</p>
         ) : (
           <div className="list-group">
             {rentals.map((rental) => (
@@ -254,7 +265,9 @@ const RentalsPage = () => {
                       Od: {new Date(rental.rentalStartDate).toLocaleDateString("pl-PL", dateFormatOptions)} Do:{" "}
                       {new Date(rental.rentalEndDate).toLocaleDateString("pl-PL", dateFormatOptions)}
                     </p>
-                    <p className="mb-0" style={{ color: textColor }}>Status: {rental.rentalStatus}</p>
+                    <p className="mb-0" style={{ ...getStatusStyle(rental.rentalStatus) }}>
+                      Status: {rental.rentalStatus}
+                    </p>
                     <p className="mb-0" style={{ color: textColor }}>
                       Cena za dzień: {rental.carListing.rentalPricePerDay} zł
                     </p>
@@ -271,7 +284,7 @@ const RentalsPage = () => {
                     <FaInfoCircle className="me-1" />
                     Szczegóły
                   </motion.button>
-                  {rental.rentalStatus !== "Ended" && (
+                  {rental.rentalStatus !== "Zakończone" && rental.rentalStatus !== "Anulowane" && (
                     <motion.button
                       onClick={() => handleCancelRental(rental.id)}
                       className="btn btn-sm btn-danger text-white"

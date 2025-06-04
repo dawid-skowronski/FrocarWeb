@@ -102,7 +102,7 @@ const getErrorMessage = (error: unknown): string => {
     "status" in error &&
     typeof (error as ApiError).status === "number"
   ) {
-    return ERROR_MESSAGES[String((error as ApiError).status)] || ERROR_MESSAGES.default; 
+    return ERROR_MESSAGES[String((error as ApiError).status)] || ERROR_MESSAGES.default;
   }
   return ERROR_MESSAGES.default;
 };
@@ -136,7 +136,7 @@ const RentalHistoryPage = () => {
     async (rental: Rental, token: string): Promise<boolean> => {
       if (rental.rentalStatus !== "Zakończone") return false;
       try {
-        const response = await fetch(`${API_URL}/CarRental/reviews/${rental.carListing.id}`, {
+        const response = await fetch(`${API_URL}/api/CarRental/reviews/${rental.carListing.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) return false;
@@ -153,7 +153,7 @@ const RentalHistoryPage = () => {
 
   const fetchRentals = useCallback(
     async (token: string): Promise<Rental[]> => {
-      const response = await fetch(`${API_URL}/CarRental/user/history`, {
+      const response = await fetch(`${API_URL}/api/CarRental/user/history`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -164,7 +164,7 @@ const RentalHistoryPage = () => {
         try {
             const errorJson = JSON.parse(errorBody);
             errorMessage = errorJson.message || errorMessage;
-        } catch {
+        } catch { 
             errorMessage = errorBody || errorMessage;
         }
         throw { status: response.status, message: errorMessage } as ApiError;
@@ -187,7 +187,7 @@ const RentalHistoryPage = () => {
           }
 
           return {
-            carRentalId: (item as Rental).carRentalId,
+            carRentalId: (item as Rental).carRentalId, 
             carListing: {
               id: (item as Rental).carListing.id,
               brand: (item as Rental).carListing.brand,
@@ -231,7 +231,7 @@ const RentalHistoryPage = () => {
       const data = await fetchRentals(token);
       setRentalHistory(data);
       if (data.length === 0) {
-        setMessage("Nie masz jeszcze zakończonych wypożyczeń.");
+        setMessage("Nie masz jeszcze zakończonych lub anulowanych wypożyczeń.");
       }
     } catch (error) {
       setMessage(getErrorMessage(error)); 
@@ -244,6 +244,17 @@ const RentalHistoryPage = () => {
   useEffect(() => {
     fetchUserRentalHistory();
   }, [fetchUserRentalHistory]);
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "Zakończone":
+        return { color: "green" };
+      case "Anulowane":
+        return { color: "red" };
+      default:
+        return { color: textColor };
+    }
+  };
 
   return (
     <motion.div
@@ -289,7 +300,7 @@ const RentalHistoryPage = () => {
             </div>
           ) : rentalHistory.length === 0 && !message ? (
             <p className="text-center" style={{ color: textColor }} data-cy="no-rentals-message">
-              Brak zakończonych wypożyczeń.
+              Brak zakończonych lub anulowanych wypożyczeń.
             </p>
           ) : (
             <>
@@ -317,10 +328,12 @@ const RentalHistoryPage = () => {
                         <td style={tableCellStyle}>{rental.carListing.carType}</td>
                         <td style={tableCellStyle}>{formatDate(rental.rentalStartDate)}</td>
                         <td style={tableCellStyle}>{formatDate(rental.rentalEndDate)}</td>
-                        <td style={tableCellStyle}>{rental.rentalStatus}</td>
+                        <td style={{ ...tableCellStyle, ...getStatusStyle(rental.rentalStatus) }}>
+                          {rental.rentalStatus}
+                        </td>
                         <td style={tableCellStyle}>
-                          {rental.rentalStatus === "Zakończone" &&
-                            (rental.hasReview ? (
+                          {rental.rentalStatus === "Zakończone" ? (
+                            rental.hasReview ? (
                               <span style={{ color: "green" }} data-cy={`review-status-${rental.carRentalId}`}>
                                 Wystawiono
                               </span>
@@ -328,7 +341,12 @@ const RentalHistoryPage = () => {
                               <span style={{ color: "orange" }} data-cy={`review-status-${rental.carRentalId}`}>
                                 Oczekuje
                               </span>
-                            ))}
+                            )
+                          ) : (
+                            <span style={{ color: "gray" }} data-cy={`review-status-${rental.carRentalId}`}>
+                              Niedostępna
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -346,17 +364,29 @@ const RentalHistoryPage = () => {
                   >
                     <div className="card-body">
                       <h5 className="card-title mb-2" style={{ color: textColor }}>{rental.carListing.brand} ({rental.carListing.carType})</h5>
-                      <p className="card-text mb-1"><strong style={{ color: textColor }}>Status:</strong> {rental.rentalStatus}</p>
+                      <p className="card-text mb-1">
+                        <strong style={{ color: textColor }}>Status:</strong>{" "}
+                        <span style={getStatusStyle(rental.rentalStatus)}>{rental.rentalStatus}</span>
+                      </p>
                       <p className="card-text mb-1"><strong style={{ color: textColor }}>Od:</strong> {formatDate(rental.rentalStartDate)}</p>
                       <p className="card-text mb-1"><strong style={{ color: textColor }}>Do:</strong> {formatDate(rental.rentalEndDate)}</p>
-                      <p className="card-text mb-2"><strong style={{ color: textColor }}>Recenzja:</strong>
+                      <p className="card-text mb-2">
+                        <strong style={{ color: textColor }}>Recenzja:</strong>{" "}
                         {rental.rentalStatus === "Zakończone" ? (
                           rental.hasReview ? (
-                            <span style={{ color: "green" }} data-cy={`review-status-card-${rental.carRentalId}`}> Wystawiono</span>
+                            <span style={{ color: "green" }} data-cy={`review-status-card-${rental.carRentalId}`}>
+                              Wystawiono
+                            </span>
                           ) : (
-                            <span style={{ color: "orange" }} data-cy={`review-status-card-${rental.carRentalId}`}> Oczekuje</span>
+                            <span style={{ color: "orange" }} data-cy={`review-status-card-${rental.carRentalId}`}>
+                              Oczekuje
+                            </span>
                           )
-                        ) : "Niedostępna"}
+                        ) : (
+                          <span style={{ color: "gray" }} data-cy={`review-status-card-${rental.carRentalId}`}>
+                            Niedostępna
+                          </span>
+                        )}
                       </p>
 
                       <div className="d-flex flex-column gap-2 mt-3">

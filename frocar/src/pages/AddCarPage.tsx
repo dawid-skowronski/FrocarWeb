@@ -362,10 +362,10 @@ const AddCarPage = () => {
                 <option value="" disabled>
                   Wybierz Rodzaj Paliwa
                 </option>
-                <option value="benzyna">Benzyna</option>
-                <option value="diesel">Diesel</option>
-                <option value="elektryczny">Elektryczny</option>
-                <option value="hybryda">Hybryda</option>
+                <option value="Benzyna">Benzyna</option>
+                <option value="Diesel">Diesel</option>
+                <option value="Elektryczny">Elektryczny</option>
+                <option value="Hybryda">Hybryda</option>
               </select>
             </div>
 
@@ -410,11 +410,11 @@ const AddCarPage = () => {
                 <option value="" disabled>
                   Wybierz Typ Samochodu
                 </option>
-                <option value="sedan">Sedan</option>
-                <option value="suv">SUV</option>
-                <option value="kombi">Kombi</option>
-                <option value="hatchback">Hatchback</option>
-                <option value="coupe">Coupe</option>
+                <option value="Sedan">Sedan</option>
+                <option value="Suv">SUV</option>
+                <option value="Kombi">Kombi</option>
+                <option value="Hatchback">Hatchback</option>
+                <option value="Coupe">Coupe</option>
               </select>
             </div>
 
@@ -562,13 +562,13 @@ const AddCarPage = () => {
                   placeholder="Wpisz adres"
                   style={inputStyle}
                 />
-                <Button
-                  variant={buttonColor}
-                  style={getPrimaryButtonStyles()}
-                  onClick={handleSearch}
-                >
-                  Szukaj
-                </Button>
+                 <Button
+                variant={buttonColor}
+                style={{ backgroundColor: buttonBackgroundColor, border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined, color: 'white' }}
+                onClick={handleSearch}
+              >
+                Szukaj
+              </Button>
               </div>
             </div>
 

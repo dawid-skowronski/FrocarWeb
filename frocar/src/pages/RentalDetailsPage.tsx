@@ -118,7 +118,7 @@ const RentalDetailsPage = () => {
 
       if (mappedRental.rentalStatus === "Zakończone") {
         const reviewResponse = await fetch(
-          `https://localhost:5001/api/CarRental/reviews/${data.carListing.id}`,
+          `https://projekt-tripify.hostingasp.pl/api/CarRental/reviews/${data.carListing.id}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -162,7 +162,7 @@ const RentalDetailsPage = () => {
     }
 
     try {
-      const response = await fetch(`https://localhost:5001/api/CarRental/${id}`, {
+      const response = await fetch(`https://projekt-tripify.hostingasp.pl/api/CarRental/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -207,7 +207,7 @@ const RentalDetailsPage = () => {
     };
 
     try {
-      const response = await fetch("https://localhost:5001/api/CarRental/review", {
+      const response = await fetch("https://projekt-tripify.hostingasp.pl/api/CarRental/review", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -362,8 +362,7 @@ const RentalDetailsPage = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4 }}
           className="mb-4 p-3 rounded"
-          style={getSecondaryCardBackground()}
-        >
+            >
           <h4 className="d-flex align-items-center mb-3" style={{ color: textColor }}>
             <FaCar className="me-2" style={{ fontSize: "1.5em" }} />
             {rental.carListing.brand} ({rental.carListing.carType})
@@ -484,7 +483,7 @@ const RentalDetailsPage = () => {
           <div className="alert alert-success text-center mb-3 rounded-pill">{reviewSuccess}</div>
         )}
 
-        {rental.rentalStatus !== "Zakończone" && (
+        {rental.rentalStatus !== "Zakończone" && rental.rentalStatus !== "Anulowane" && (
           <motion.button
             onClick={handleCancelRental}
             className="btn btn-danger w-100 rounded-pill text-white"

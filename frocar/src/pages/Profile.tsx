@@ -8,6 +8,7 @@ import { useThemeStyles } from "../styles/useThemeStyles";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import Cookies from "js-cookie";
+import { FaRedo } from "react-icons/fa";
 import { filterByBrand, filterByAvailability, filterByFuelType, filterByMinSeats, filterByMaxPrice } from '../utils/filterStrategies';
 import { applyFilters, FilterRule } from '../utils/carFilterContext';
 
@@ -38,7 +39,7 @@ interface ApiErrorResponse {
 }
 
 const Maps_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-const API_URL = "https://localhost:5001/api";
+const API_URL = "https://localhost:5001";
 const CONTAINER_STYLE = { width: "100%", height: "500px" };
 const ERROR_MESSAGES: Record<string, string> = {
   "401": "Sesja wygasła. Zaloguj się ponownie, aby zarządzać profilem.",
@@ -136,7 +137,7 @@ export default function ProfilePage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/CarListings/user`, {
+      const response = await fetch(`${API_URL}/api/CarListings/user`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -189,7 +190,7 @@ export default function ProfilePage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/account/change-username`, {
+      const response = await fetch(`${API_URL}/api/account/change-username`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -222,7 +223,7 @@ export default function ProfilePage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/CarListings/${listingToDelete}`, {
+      const response = await fetch(`${API_URL}/api/CarListings/${listingToDelete}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -258,7 +259,7 @@ export default function ProfilePage() {
     const newAvailability = !listing.isAvailable;
 
     try {
-      const response = await fetch(`${API_URL}/CarListings/${id}/availability`, {
+      const response = await fetch(`${API_URL}/api/CarListings/${id}/availability`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -289,7 +290,7 @@ export default function ProfilePage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/CarListings/${selectedListing.id}`, {
+      const response = await fetch(`${API_URL}/api/CarListings/${selectedListing.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -460,6 +461,18 @@ export default function ProfilePage() {
             >
               Zobacz historię wypożyczeń
             </motion.button>
+            <motion.button
+              style={{ ...buttonStyle("#17a2b8"), flexGrow: 1 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={fetchUserCarListings}
+              disabled={loading}
+              aria-label="Odśwież listę samochodów"
+              data-cy="refresh-listings-button"
+            >
+              <FaRedo className="me-2" />
+              Odśwież
+            </motion.button>
           </div>
         </div>
 
@@ -505,10 +518,10 @@ export default function ProfilePage() {
                 data-cy="filter-fuel-type-select"
               >
                 <option value="">Wszystkie</option>
-                <option value="benzyna">Benzyna</option>
-                <option value="diesel">Diesel</option>
-                <option value="elektryczny">Elektryczny</option>
-                <option value="hybryda">Hybryda</option>
+                <option value="Benzyna">Benzyna</option>
+                <option value="Diesel">Diesel</option>
+                <option value="Elektryczny">Elektryczny</option>
+                <option value="ybryda">Hybryda</option>
               </select>
             </div>
             <div className="flex-grow-1 mb-2 mb-sm-0">
@@ -562,9 +575,9 @@ export default function ProfilePage() {
                     <th style={tableCellStyle}>Marka</th>
                     <th style={tableCellStyle} className="d-none d-lg-table-cell">Pojemność silnika (l)</th>
                     <th style={tableCellStyle}>Rodzaj paliwa</th>
-                    <th style={tableCellStyle} className="d-none d-lg-table-cell">Liczba miejsc</th> 
+                    <th style={tableCellStyle} className="d-none d-lg-table-cell">Liczba miejsc</th>
                     <th style={tableCellStyle} className="d-none d-xl-table-cell">Typ samochodu</th>
-                    <th style={tableCellStyle} className="d-none d-xl-table-cell">Dodatki</th> 
+                    <th style={tableCellStyle} className="d-none d-xl-table-cell">Dodatki</th>
                     <th style={tableCellStyle}>Lokalizacja</th>
                     <th style={tableCellStyle}>Cena/dzień (zł)</th>
                     <th style={tableCellStyle}>Dostępność</th>
@@ -788,11 +801,11 @@ export default function ProfilePage() {
                   aria-label="Typ samochodu"
                   data-cy="edit-car-type-select"
                 >
-                  <option value="sedan">Sedan</option>
-                  <option value="suv">SUV</option>
-                  <option value="kombi">Kombi</option>
-                  <option value="hatchback">Hatchback</option>
-                  <option value="coupe">Coupe</option>
+                  <option value="Sedan">Sedan</option>
+                  <option value="Suv">SUV</option>
+                  <option value="Kombi">Kombi</option>
+                  <option value="Hatchback">Hatchback</option>
+                  <option value="Coupe">Coupe</option>
                 </select>
               </div>
               <div className="mb-3">

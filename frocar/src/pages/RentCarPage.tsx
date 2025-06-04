@@ -344,7 +344,7 @@ const RentCarPage = () => {
               />
               <Button
                 variant={buttonColor}
-                style={{ backgroundColor: buttonBackgroundColor, border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined }}
+                style={{ backgroundColor: buttonBackgroundColor, border: theme === "dark" ? `2px solid ${buttonBorderColor}` : undefined, color: 'white'  }}
                 onClick={debouncedSearch}
               >
                 Szukaj
@@ -376,10 +376,10 @@ const RentCarPage = () => {
                 style={{ backgroundColor: cardBackgroundColor, color: textColor }}
               >
                 <option value="all">Wszystkie</option>
-                <option value="benzyna">Benzyna</option>
-                <option value="diesel">Diesel</option>
-                <option value="elektryczny">Elektryczny</option>
-                <option value="hybryda">Hybryda</option>
+                <option value="Benzyna">Benzyna</option>
+                <option value="Diesel">Diesel</option>
+                <option value="Elektryczny">Elektryczny</option>
+                <option value="Hybryda">Hybryda</option>
               </select>
             </div>
             <div className="col-md-2">

@@ -1,11 +1,16 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { FaPlusCircle, FaCar } from "react-icons/fa";
 import { useThemeStyles } from "../styles/useThemeStyles";
 
-interface HomePageProps {
-  setLoading: () => void;
+interface HomeCardLinkProps {
+  to: string;
+  icon: React.ElementType;
+  text: string;
+  delay: number;
+  onClick: () => void;
 }
 
 const cardVariants = {
@@ -14,14 +19,47 @@ const cardVariants = {
   hover: { scale: 1.05 },
 };
 
-const HomePage: React.FC<HomePageProps> = ({ setLoading }) => {
+const HomeCardLink: React.FC<HomeCardLinkProps> = ({ to, icon: Icon, text, delay, onClick }) => {
   const {
-    backgroundColor,
     cardBackgroundColor,
     cardHoverBackgroundColor,
     textColor,
     cardStyle,
   } = useThemeStyles();
+
+  return (
+    <Link
+      to={to}
+      className="text-decoration-none"
+      onClick={onClick}
+    >
+      <motion.div
+        variants={{
+          ...cardVariants,
+          visible: { ...cardVariants.visible, backgroundColor: cardBackgroundColor },
+          hover: { ...cardVariants.hover, backgroundColor: cardHoverBackgroundColor },
+        }}
+        initial="hidden"
+        animate="visible"
+        whileHover="hover"
+        transition={{ duration: 0.5, delay }}
+        style={{ ...cardStyle, height: "150px" }}
+      >
+        <Icon size="3em" style={{ color: textColor }} />
+        <h4 className="mt-2" style={{ color: textColor, fontSize: "1.2rem" }}>
+          {text}
+        </h4>
+      </motion.div>
+    </Link>
+  );
+};
+
+interface HomePageProps {
+  setLoading: () => void;
+}
+
+const HomePage: React.FC<HomePageProps> = ({ setLoading }) => {
+  const { backgroundColor } = useThemeStyles();
 
   const handleClick = () => {
     setLoading();
@@ -37,55 +75,23 @@ const HomePage: React.FC<HomePageProps> = ({ setLoading }) => {
     >
       <div className="row g-4">
         <div className="col-12 col-md-6 d-flex justify-content-center">
-          <Link
+          <HomeCardLink
             to="/add-car"
-            className="text-decoration-none"
+            icon={FaPlusCircle}
+            text="Dodaj samochód"
+            delay={0.2}
             onClick={handleClick}
-          >
-            <motion.div
-              variants={{
-                ...cardVariants,
-                visible: { ...cardVariants.visible, backgroundColor: cardBackgroundColor },
-                hover: { ...cardVariants.hover, backgroundColor: cardHoverBackgroundColor },
-              }}
-              initial="hidden"
-              animate="visible"
-              whileHover="hover"
-              transition={{ duration: 0.5, delay: 0.2 }}
-              style={{ ...cardStyle, height: "150px" }}
-            >
-              <FaPlusCircle size="3em" style={{ color: textColor }} />
-              <h4 className="mt-2" style={{ color: textColor, fontSize: "1.2rem" }}>
-                Dodaj samochód
-              </h4>
-            </motion.div>
-          </Link>
+          />
         </div>
 
         <div className="col-12 col-md-6 d-flex justify-content-center">
-          <Link
+          <HomeCardLink
             to="/rent-car"
-            className="text-decoration-none"
+            icon={FaCar}
+            text="Wypożycz samochód"
+            delay={0.4}
             onClick={handleClick}
-          >
-            <motion.div
-              variants={{
-                ...cardVariants,
-                visible: { ...cardVariants.visible, backgroundColor: cardBackgroundColor },
-                hover: { ...cardVariants.hover, backgroundColor: cardHoverBackgroundColor },
-              }}
-              initial="hidden"
-              animate="visible"
-              whileHover="hover"
-              transition={{ duration: 0.5, delay: 0.4 }}
-              style={{ ...cardStyle, height: "150px" }}
-            >
-              <FaCar size="3em" style={{ color: textColor }} />
-              <h4 className="mt-2" style={{ color: textColor, fontSize: "1.2rem" }}>
-                Wypożycz samochód
-              </h4>
-            </motion.div>
-          </Link>
+          />
         </div>
       </div>
     </motion.div>
